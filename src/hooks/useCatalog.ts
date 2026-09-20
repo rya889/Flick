@@ -6,6 +6,7 @@ import {
   deleteBook,
   getAllBooks,
   getAllProgress,
+  getBook,
   getProgress,
   getShortsForBook,
   saveBookWithShorts,
@@ -20,7 +21,7 @@ import {
   parseSample,
   parseUploadedFile,
 } from "@/lib/parsers";
-import { buildShorts } from "@/lib/shorts";
+import { buildShorts, normalizeShort } from "@/lib/shorts";
 import type { CatalogBook, ParsedBook, ReadingProgress, UploadJob } from "@/lib/types";
 import { SAMPLE_LIBRARY } from "@/lib/types";
 
@@ -121,8 +122,7 @@ export function useCatalog() {
     async (sampleId: string) => {
       const sample = SAMPLE_LIBRARY.find((s) => s.id === sampleId);
       if (!sample) throw new Error("Unknown sample");
-      const existing = books.find((b) => b.id === sampleId);
-      if (existing) return existing;
+      // Always re-parse samples so chapter markers / TLDR stay current
       const book = await parseSample(
         sample.id,
         sample.title,
@@ -132,7 +132,7 @@ export function useCatalog() {
       );
       return ingestBook(book);
     },
-    [books, ingestBook],
+    [ingestBook],
   );
 
   const removeBook = useCallback(
@@ -151,8 +151,23 @@ export function useCatalog() {
   }, []);
 
   const loadShorts = useCallback(async (bookId: string) => {
-    return getShortsForBook(bookId);
-  }, []);
+    const shorts = await getShortsForBook(bookId);
+    const needsRebuild = shorts.some(
+      (s) =>
+        !s.tldr ||
+        s.chapterIndex === undefined ||
+        s.chapterTitle === undefined,
+    );
+    if (!needsRebuild) {
+      return shorts.map((s) => normalizeShort(s));
+    }
+    const book = await getBook(bookId);
+    if (!book) return shorts.map((s) => normalizeShort(s));
+    const rebuilt = buildShorts(book);
+    await saveBookWithShorts(book, rebuilt, rebuilt.length);
+    await refresh();
+    return rebuilt;
+  }, [refresh]);
 
   const resumeProgress = useCallback(async (bookId: string) => {
     return (await getProgress(bookId)) ?? null;

@@ -1,6 +1,6 @@
 export type BookFormat = "epub" | "mobi" | "txt" | "paste" | "url" | "sample";
 
-export type VoiceMode = "original" | "viral";
+export type VoiceMode = "original" | "tldr";
 
 export interface ParsedBook {
   id: string;
@@ -18,8 +18,11 @@ export interface ShortSegment {
   bookId: string;
   index: number;
   original: string;
-  viral: string;
+  /** Abbreviated extractive summary of the same passage. */
+  tldr: string;
   wordCount: number;
+  chapterIndex: number;
+  chapterTitle: string;
 }
 
 export interface ReadingProgress {

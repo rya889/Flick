@@ -10,31 +10,31 @@ interface VoiceToggleProps {
 export function VoiceToggle({ mode, onChange }: VoiceToggleProps) {
   return (
     <div
-      className="flex rounded-full border border-[var(--ink-muted)]/30 bg-[var(--paper-elevated)] p-0.5 text-xs font-medium"
+      className="flex rounded-full border border-white/20 bg-black/35 p-0.5 text-xs font-medium backdrop-blur"
       role="group"
-      aria-label="Voice mode"
+      aria-label="Reading mode"
     >
       <button
         type="button"
         className={`rounded-full px-3 py-1.5 transition-colors ${
           mode === "original"
-            ? "bg-[var(--ink)] text-[var(--paper)]"
-            : "text-[var(--ink-muted)]"
+            ? "bg-white text-black"
+            : "text-white/65"
         }`}
         onClick={() => onChange("original")}
       >
-        Original
+        Full
       </button>
       <button
         type="button"
         className={`rounded-full px-3 py-1.5 transition-colors ${
-          mode === "viral"
-            ? "bg-[var(--signal)] text-white shadow-[0_0_20px_rgba(255,90,54,0.35)]"
-            : "text-[var(--ink-muted)]"
+          mode === "tldr"
+            ? "bg-[var(--signal)] text-white"
+            : "text-white/65"
         }`}
-        onClick={() => onChange("viral")}
+        onClick={() => onChange("tldr")}
       >
-        Viral
+        TLDR
       </button>
     </div>
   );

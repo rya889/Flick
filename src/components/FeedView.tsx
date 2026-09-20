@@ -63,7 +63,13 @@ export function FeedView({
               onClick={() => onOpenShort(book.id, short.index)}
             >
               <h3 className="font-display text-sm font-semibold text-[var(--ink)]">
-                {voice === "viral" ? "Viral cut" : "Passage"} #{short.index + 1}
+                {voice === "tldr" ? "TLDR" : "Passage"} #{short.index + 1}
+                {short.chapterTitle ? (
+                  <span className="font-sans text-[11px] font-normal text-[var(--ink-muted)]">
+                    {" "}
+                    · {short.chapterTitle}
+                  </span>
+                ) : null}
               </h3>
               <p className="mt-2 font-serif text-[15px] leading-relaxed text-[var(--ink)]/90 [overflow-wrap:anywhere]">
                 {preview}

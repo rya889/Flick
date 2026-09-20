@@ -1,7 +1,7 @@
 "use client";
 
-import { useCallback, useEffect, useRef, useState } from "react";
-import { shortDisplayText } from "@/lib/shorts";
+import { useCallback, useEffect, useMemo, useRef, useState } from "react";
+import { listChapters, shortDisplayText } from "@/lib/shorts";
 import type { CatalogBook, ShortSegment, VoiceMode } from "@/lib/types";
 import { VoiceToggle } from "./VoiceToggle";
 import { WordReveal } from "./WordReveal";
@@ -56,8 +56,14 @@ export function ShortsPlayer({
   const short = shorts[index];
   const display = short ? shortDisplayText(short, voice) : "";
   const words = display.split(/\s+/).filter(Boolean);
-  const nextShort = shorts[index + 1];
-  const nextPreview = nextShort ? shortDisplayText(nextShort, voice) : null;
+  const chapters = useMemo(() => listChapters(shorts), [shorts]);
+  const chapterPos = useMemo(() => {
+    if (!short || chapters.length === 0) return 0;
+    const ci = short.chapterIndex ?? 0;
+    const found = chapters.findIndex((c) => c.index === ci);
+    return found >= 0 ? found : 0;
+  }, [short, chapters]);
+  const currentChapter = chapters[chapterPos];
 
   const stopListen = useCallback(() => {
     if (typeof window !== "undefined" && window.speechSynthesis) {
@@ -120,6 +126,16 @@ export function ShortsPlayer({
     stopListen();
     if (index > 0) setIndex((i) => i - 1);
   }, [index, stopListen]);
+
+  const goChapter = useCallback(
+    (dir: -1 | 1) => {
+      stopListen();
+      const nextPos = chapterPos + dir;
+      if (nextPos < 0 || nextPos >= chapters.length) return;
+      setIndex(chapters[nextPos].startShortIndex);
+    },
+    [chapterPos, chapters, stopListen],
+  );
 
   const burstLike = useCallback(() => {
     if (!short) return;
@@ -324,6 +340,35 @@ export function ShortsPlayer({
           </button>
           <VoiceToggle mode={voice} onChange={onVoiceChange} />
         </div>
+        {chapters.length > 1 && (
+          <div className="flex items-center gap-2">
+            <button
+              type="button"
+              disabled={chapterPos <= 0}
+              onClick={() => goChapter(-1)}
+              className="min-h-9 shrink-0 rounded-full bg-black/40 px-3 py-1.5 text-xs text-white backdrop-blur disabled:opacity-30"
+              aria-label="Previous chapter"
+            >
+              ‹ Ch
+            </button>
+            <p className="min-w-0 flex-1 truncate text-center text-[11px] text-white/70">
+              {currentChapter?.title ?? "Chapter"}
+              <span className="text-white/40">
+                {" "}
+                · {chapterPos + 1}/{chapters.length}
+              </span>
+            </p>
+            <button
+              type="button"
+              disabled={chapterPos >= chapters.length - 1}
+              onClick={() => goChapter(1)}
+              className="min-h-9 shrink-0 rounded-full bg-black/40 px-3 py-1.5 text-xs text-white backdrop-blur disabled:opacity-30"
+              aria-label="Next chapter"
+            >
+              Ch ›
+            </button>
+          </div>
+        )}
       </div>
 
       {/* Gesture stage only — left / center / right */}
@@ -351,19 +396,12 @@ export function ShortsPlayer({
           <WordReveal text={display} activeIndex={listening ? words.length : wordIndex} paused={paused && !listening} />
         </div>
 
-        {wordIndex > words.length * 0.65 && nextPreview && (
-          <div className="pointer-events-none mx-auto mt-5 w-full max-w-sm rounded-2xl border border-white/10 bg-black/40 px-3 py-2 text-left">
-            <div className="text-[10px] font-bold uppercase tracking-[0.16em] text-white/45">
-              Up next
-            </div>
-            <div className="mt-1 line-clamp-2 text-sm font-semibold text-white/85">
-              {nextPreview.split(/\s+/).slice(0, 14).join(" ")}…
-            </div>
-          </div>
-        )}
-
         <p className="pointer-events-none mt-4 shrink-0 text-center text-[11px] text-white/40">
-          {index + 1}/{shorts.length} · left back · right next
+          {index + 1}/{shorts.length}
+          {chapters.length <= 1 && short.chapterTitle
+            ? ` · ${short.chapterTitle}`
+            : ""}
+          {" · left back · right next"}
         </p>
       </div>
 
