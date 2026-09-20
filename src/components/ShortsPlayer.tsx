@@ -2,6 +2,13 @@
 
 import { useCallback, useEffect, useMemo, useRef, useState } from "react";
 import { listChapters, shortDisplayText } from "@/lib/shorts";
+import {
+  primeVoices,
+  speakText,
+  speechSupported,
+  stopSpeaking,
+  unlockSpeech,
+} from "@/lib/speak";
 import { needsAiTldr, requestAiTldrs } from "@/lib/tldr-client";
 import type { CatalogBook, ShortSegment, VoiceMode } from "@/lib/types";
 import { VoiceToggle } from "./VoiceToggle";
@@ -53,12 +60,14 @@ export function ShortsPlayer({
   const [copied, setCopied] = useState(false);
   const [tldrBusy, setTldrBusy] = useState(false);
   const [tldrError, setTldrError] = useState<string | null>(null);
+  const [listenError, setListenError] = useState<string | null>(null);
   const touchStart = useRef<{ x: number; y: number; t: number } | null>(null);
   const lastTap = useRef(0);
   const usedTouch = useRef(false);
   const minutesAccumulator = useRef(0);
   const speakRef = useRef<SpeechSynthesisUtterance | null>(null);
   const inflight = useRef<Set<string>>(new Set());
+  const listenAdvance = useRef(false);
 
   const short = shorts[index];
   const display = short ? shortDisplayText(short, voice) : "";
@@ -134,11 +143,13 @@ export function ShortsPlayer({
   }, [ensureAiTldrs, index, voice]);
 
   const stopListen = useCallback(() => {
-    if (typeof window !== "undefined" && window.speechSynthesis) {
-      window.speechSynthesis.cancel();
-    }
+    stopSpeaking();
     speakRef.current = null;
     setListening(false);
+  }, []);
+
+  useEffect(() => {
+    primeVoices();
   }, []);
 
   useEffect(() => {
@@ -147,7 +158,9 @@ export function ShortsPlayer({
 
   useEffect(() => {
     setWordIndex(0);
-    stopListen();
+    // Keep audio alive when Listen advances to the next short
+    if (!listenAdvance.current) stopListen();
+    listenAdvance.current = false;
   }, [index, voice, stopListen]);
 
   useEffect(() => () => stopListen(), [stopListen]);
@@ -220,22 +233,41 @@ export function ShortsPlayer({
   }, [liked, onLike, short]);
 
   const toggleListen = useCallback(() => {
-    if (!short || typeof window === "undefined" || !window.speechSynthesis) return;
+    // Unlock must stay in the tap stack (iOS Chrome / WebKit)
+    unlockSpeech();
+    setListenError(null);
+
+    if (!short) return;
     if (listening) {
       stopListen();
       return;
     }
+    if (!speechSupported()) {
+      setListenError("Speech isn’t available in this browser");
+      return;
+    }
+
     setPaused(true);
-    const u = new SpeechSynthesisUtterance(display);
-    u.rate = Math.min(1.4, Math.max(0.8, playbackSpeed));
-    u.onend = () => {
-      setListening(false);
-      if (index < shorts.length - 1) setIndex((i) => i + 1);
-    };
-    u.onerror = () => setListening(false);
-    speakRef.current = u;
     setListening(true);
-    window.speechSynthesis.speak(u);
+    speakText(display, {
+      rate: playbackSpeed,
+      onEnd: () => {
+        setListening(false);
+        if (index < shorts.length - 1) {
+          listenAdvance.current = true;
+          setIndex((i) => i + 1);
+        }
+      },
+      onError: (reason) => {
+        setListening(false);
+        if (reason === "interrupted" || reason === "canceled") return;
+        setListenError(
+          reason.includes("Silent")
+            ? reason
+            : "Couldn’t play audio — check Silent Mode, then tap Listen again",
+        );
+      },
+    });
   }, [display, index, listening, playbackSpeed, short, shorts.length, stopListen]);
 
   const shareQuote = useCallback(async () => {
@@ -266,6 +298,7 @@ export function ShortsPlayer({
   /** Stage-only gestures — never attached to chrome/controls. */
   const onStageTouchStart = (e: React.TouchEvent) => {
     usedTouch.current = true;
+    unlockSpeech(); // warm WebKit speech early on iOS
     const t = e.touches[0];
     touchStart.current = { x: t.clientX, y: t.clientY, t: Date.now() };
   };
@@ -473,6 +506,11 @@ export function ShortsPlayer({
             Listening…
           </p>
         )}
+        {listenError && (
+          <p className="pointer-events-none mb-2 shrink-0 text-center text-xs text-amber-200/90">
+            {listenError}
+          </p>
+        )}
         <div className="pointer-events-none min-w-0 w-full">
           <WordReveal
             text={display}
@@ -520,6 +558,7 @@ export function ShortsPlayer({
             className={`min-h-11 rounded-full px-3 py-2 text-sm ${
               listening ? "bg-[var(--signal)] text-white" : "bg-black/40 text-white"
             }`}
+            onPointerDown={() => unlockSpeech()}
             onClick={toggleListen}
           >
             {listening ? "Stop" : "Listen"}
