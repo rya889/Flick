@@ -1,14 +1,14 @@
 # Flick — Cloud Agent Handoff
 
 **Agent:** https://cursor.com/agents/bc-01a0b1f0-1672-72e1-a604-41512c9eb735  
-**GitHub (empty until pushed):** https://github.com/rya889/Flick  
+**GitHub:** https://github.com/rya889/Flick (`main` @ `4d03617` — ingested 2026-09-20)  
 **Vercel project:** https://vercel.com/le-team2/flick-shorts  
 
 ## Where the code lived on the agent VM
 
 - App root: `/agent/flick` (Next.js 16 App Router)
 - Branch prepared for push: `main` @ `4d03617`
-- No GitHub credentials on this agent (started without a repo)
+- Original agent had no GitHub credentials; history was restored from `flick.bundle` into this repo
 
 ## Artifacts in this folder
 
