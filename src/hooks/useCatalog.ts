@@ -11,6 +11,7 @@ import {
   getShortsForBook,
   saveBookWithShorts,
   saveProgress,
+  saveShorts,
   saveUploadJob,
   getUploadJobs,
 } from "@/lib/db";
@@ -22,7 +23,13 @@ import {
   parseUploadedFile,
 } from "@/lib/parsers";
 import { buildShorts, normalizeShort } from "@/lib/shorts";
-import type { CatalogBook, ParsedBook, ReadingProgress, UploadJob } from "@/lib/types";
+import type {
+  CatalogBook,
+  ParsedBook,
+  ReadingProgress,
+  ShortSegment,
+  UploadJob,
+} from "@/lib/types";
 import { SAMPLE_LIBRARY } from "@/lib/types";
 
 export function useCatalog() {
@@ -169,6 +176,11 @@ export function useCatalog() {
     return rebuilt;
   }, [refresh]);
 
+  const patchShorts = useCallback(async (updated: ShortSegment[]) => {
+    if (updated.length === 0) return;
+    await saveShorts(updated);
+  }, []);
+
   const resumeProgress = useCallback(async (bookId: string) => {
     return (await getProgress(bookId)) ?? null;
   }, []);
@@ -185,6 +197,7 @@ export function useCatalog() {
     removeBook,
     updateProgress,
     loadShorts,
+    patchShorts,
     resumeProgress,
   };
 }

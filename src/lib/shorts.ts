@@ -94,6 +94,7 @@ export function buildShorts(book: ParsedBook): ShortSegment[] {
     index,
     original: piece.text,
     tldr: abbreviate(piece.text),
+    tldrSource: "extractive" as const,
     wordCount: countWords(piece.text),
     chapterIndex: piece.chapterIndex,
     chapterTitle: piece.chapterTitle,
@@ -124,6 +125,7 @@ export function normalizeShort(short: ShortSegment & { viral?: string }): ShortS
   return {
     ...short,
     tldr,
+    tldrSource: short.tldrSource ?? (short.viral ? "extractive" : short.tldr ? short.tldrSource : "extractive"),
     chapterIndex: short.chapterIndex ?? 0,
     chapterTitle: short.chapterTitle || "Chapter 1",
   };

@@ -18,8 +18,10 @@ export interface ShortSegment {
   bookId: string;
   index: number;
   original: string;
-  /** Abbreviated extractive summary of the same passage. */
+  /** Condensed version of the passage (AI when available). */
   tldr: string;
+  /** How the tldr was produced. */
+  tldrSource?: "ai" | "extractive";
   wordCount: number;
   chapterIndex: number;
   chapterTitle: string;

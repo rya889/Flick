@@ -69,6 +69,16 @@ export async function saveBookWithShorts(
   return catalog;
 }
 
+export async function saveShort(short: ShortSegment): Promise<void> {
+  await tx("shorts", "readwrite", (os) => os.put(short));
+}
+
+export async function saveShorts(shorts: ShortSegment[]): Promise<void> {
+  for (const short of shorts) {
+    await tx("shorts", "readwrite", (os) => os.put(short));
+  }
+}
+
 export async function getAllBooks(): Promise<CatalogBook[]> {
   const db = await openDb();
   return new Promise((resolve, reject) => {

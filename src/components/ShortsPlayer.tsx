@@ -2,11 +2,13 @@
 
 import { useCallback, useEffect, useMemo, useRef, useState } from "react";
 import { listChapters, shortDisplayText } from "@/lib/shorts";
+import { needsAiTldr, requestAiTldrs } from "@/lib/tldr-client";
 import type { CatalogBook, ShortSegment, VoiceMode } from "@/lib/types";
 import { VoiceToggle } from "./VoiceToggle";
 import { WordReveal } from "./WordReveal";
 
 const SPEEDS = [0.75, 1, 1.25, 1.5, 2];
+const PREFETCH = 4;
 
 interface ShortsPlayerProps {
   book: CatalogBook;
@@ -22,6 +24,7 @@ interface ShortsPlayerProps {
   onSave: (id: string) => void;
   onProgress: (index: number, wordOffset: number) => void;
   onTickMinutes: (fraction: number) => void;
+  onShortsUpdate: (shorts: ShortSegment[]) => void;
   onClose: () => void;
 }
 
@@ -39,6 +42,7 @@ export function ShortsPlayer({
   onSave,
   onProgress,
   onTickMinutes,
+  onShortsUpdate,
   onClose,
 }: ShortsPlayerProps) {
   const [index, setIndex] = useState(initialIndex);
@@ -47,11 +51,14 @@ export function ShortsPlayer({
   const [heartBurst, setHeartBurst] = useState(false);
   const [listening, setListening] = useState(false);
   const [copied, setCopied] = useState(false);
+  const [tldrBusy, setTldrBusy] = useState(false);
+  const [tldrError, setTldrError] = useState<string | null>(null);
   const touchStart = useRef<{ x: number; y: number; t: number } | null>(null);
   const lastTap = useRef(0);
   const usedTouch = useRef(false);
   const minutesAccumulator = useRef(0);
   const speakRef = useRef<SpeechSynthesisUtterance | null>(null);
+  const inflight = useRef<Set<string>>(new Set());
 
   const short = shorts[index];
   const display = short ? shortDisplayText(short, voice) : "";
@@ -64,6 +71,67 @@ export function ShortsPlayer({
     return found >= 0 ? found : 0;
   }, [short, chapters]);
   const currentChapter = chapters[chapterPos];
+
+  const ensureAiTldrs = useCallback(
+    async (from: number) => {
+      if (voice !== "tldr") return;
+      const slice = shorts.slice(from, from + PREFETCH).filter(needsAiTldr);
+      if (slice.length === 0) return;
+
+      const ids = slice.map((s) => s.id).filter((id) => !inflight.current.has(id));
+      if (ids.length === 0) return;
+      ids.forEach((id) => inflight.current.add(id));
+
+      const waitingOnCurrent = Boolean(short && ids.includes(short.id));
+      if (waitingOnCurrent) {
+        setTldrBusy(true);
+        setTldrError(null);
+      }
+
+      try {
+        const { tldrs, error, code } = await requestAiTldrs(
+          slice
+            .filter((s) => ids.includes(s.id))
+            .map((s) => ({
+              id: s.id,
+              text: s.original,
+              chapterTitle: s.chapterTitle,
+            })),
+          { title: book.title, author: book.author },
+        );
+
+        if (error) {
+          if (waitingOnCurrent) {
+            setTldrError(
+              code === "NO_AI_KEY"
+                ? "Add an AI key (header · AI key) for real TLDRs"
+                : error,
+            );
+          }
+          return;
+        }
+
+        if (tldrs.length === 0) return;
+
+        const map = new Map(tldrs.map((t) => [t.id, t.tldr]));
+        const next = shorts.map((s) => {
+          const condensed = map.get(s.id);
+          if (!condensed) return s;
+          return { ...s, tldr: condensed, tldrSource: "ai" as const };
+        });
+        onShortsUpdate(next);
+        setTldrError(null);
+      } finally {
+        ids.forEach((id) => inflight.current.delete(id));
+        if (waitingOnCurrent) setTldrBusy(false);
+      }
+    },
+    [book.author, book.title, onShortsUpdate, short, shorts, voice],
+  );
+
+  useEffect(() => {
+    void ensureAiTldrs(index);
+  }, [ensureAiTldrs, index, voice]);
 
   const stopListen = useCallback(() => {
     if (typeof window !== "undefined" && window.speechSynthesis) {
@@ -85,7 +153,8 @@ export function ShortsPlayer({
   useEffect(() => () => stopListen(), [stopListen]);
 
   useEffect(() => {
-    if (!short || paused || listening) return;
+    if (!short || paused || listening || tldrBusy) return;
+    if (voice === "tldr" && needsAiTldr(short)) return;
     const wpm = 180 * playbackSpeed;
     const msPerWord = 60000 / wpm;
     const timer = window.setInterval(() => {
@@ -100,22 +169,23 @@ export function ShortsPlayer({
       }
     }, msPerWord);
     return () => clearInterval(timer);
-  }, [short, paused, listening, playbackSpeed, words.length, onTickMinutes]);
+  }, [short, paused, listening, playbackSpeed, words.length, onTickMinutes, tldrBusy, voice]);
 
   useEffect(() => {
     onProgress(index, wordIndex);
   }, [index, wordIndex, onProgress]);
 
-  // Auto-advance when words finish (unless listening)
+  // Auto-advance when words finish (unless listening / condensing)
   useEffect(() => {
-    if (listening || paused) return;
+    if (listening || paused || tldrBusy) return;
+    if (voice === "tldr" && short && needsAiTldr(short)) return;
     if (words.length > 0 && wordIndex >= words.length - 1) {
       const t = window.setTimeout(() => {
         if (index < shorts.length - 1) setIndex((i) => i + 1);
       }, 700);
       return () => window.clearTimeout(t);
     }
-  }, [wordIndex, words.length, index, shorts.length, listening, paused]);
+  }, [wordIndex, words.length, index, shorts.length, listening, paused, tldrBusy, voice, short]);
 
   const goNext = useCallback(() => {
     stopListen();
@@ -381,8 +451,19 @@ export function ShortsPlayer({
       >
         <p className="pointer-events-none mb-3 shrink-0 truncate text-center font-display text-xs uppercase tracking-[0.2em] text-[var(--signal)]">
           {book.title}
+          {voice === "tldr" ? " · TLDR" : ""}
         </p>
-        {paused && !listening && (
+        {tldrBusy && (
+          <p className="pointer-events-none mb-2 shrink-0 text-center text-xs text-[var(--signal)]">
+            Condensing with AI…
+          </p>
+        )}
+        {tldrError && (
+          <p className="pointer-events-none mb-2 shrink-0 text-center text-xs text-amber-200/90">
+            {tldrError}
+          </p>
+        )}
+        {paused && !listening && !tldrBusy && (
           <p className="pointer-events-none mb-2 shrink-0 text-center text-xs text-white/50">
             Paused — tap center · double-tap like
           </p>
@@ -393,11 +474,16 @@ export function ShortsPlayer({
           </p>
         )}
         <div className="pointer-events-none min-w-0 w-full">
-          <WordReveal text={display} activeIndex={listening ? words.length : wordIndex} paused={paused && !listening} />
+          <WordReveal
+            text={display}
+            activeIndex={listening || tldrBusy ? words.length : wordIndex}
+            paused={(paused && !listening) || tldrBusy}
+          />
         </div>
 
         <p className="pointer-events-none mt-4 shrink-0 text-center text-[11px] text-white/40">
           {index + 1}/{shorts.length}
+          {short.tldrSource === "ai" && voice === "tldr" ? " · AI" : ""}
           {chapters.length <= 1 && short.chapterTitle
             ? ` · ${short.chapterTitle}`
             : ""}

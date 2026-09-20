@@ -7,6 +7,7 @@ import type { CatalogBook, ShortSegment, VoiceMode } from "@/lib/types";
 import { CatalogList } from "./CatalogList";
 import { EngagementStrip } from "./EngagementStrip";
 import { FeedView } from "./FeedView";
+import { AiKeyPanel } from "./AiKeyPanel";
 import { ShortsPlayer } from "./ShortsPlayer";
 import { UploadPanel } from "./UploadPanel";
 import { VoiceToggle } from "./VoiceToggle";
@@ -109,6 +110,7 @@ export function FlickApp() {
           </div>
           <VoiceToggle mode={voice} onChange={setVoice} />
         </div>
+        <AiKeyPanel />
         <EngagementStrip
           data={engagement.data}
           goalProgress={engagement.goalProgress}
@@ -211,6 +213,10 @@ export function FlickApp() {
           onSave={engagement.save}
           onProgress={handleProgress}
           onTickMinutes={engagement.recordMinutes}
+          onShortsUpdate={(shorts) => {
+            setPlayer((p) => (p ? { ...p, shorts } : p));
+            void catalog.patchShorts(shorts.filter((s) => s.tldrSource === "ai"));
+          }}
           onClose={() => setPlayer(null)}
         />
       )}
