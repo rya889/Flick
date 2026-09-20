@@ -41,3 +41,10 @@ body {
 .font-serif {
   font-family: var(--font-source-serif), Georgia, serif;
 }
+
+/* Mobile-safe text wrapping for shorts captions */
+.shorts-caption {
+  overflow-wrap: anywhere;
+  word-break: break-word;
+  hyphens: auto;
+}
