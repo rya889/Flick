@@ -1,4 +1,4 @@
-import type { EngagementData, ReactionKind } from "./types";
+import type { EngagementData } from "./types";
 import { DEFAULT_ENGAGEMENT } from "./types";
 
 const STORAGE_KEY = "flick-engagement-v1";
@@ -12,7 +12,11 @@ export function loadEngagement(): EngagementData {
   try {
     const raw = localStorage.getItem(STORAGE_KEY);
     if (!raw) return { ...DEFAULT_ENGAGEMENT };
-    return { ...DEFAULT_ENGAGEMENT, ...JSON.parse(raw) };
+    const parsed = JSON.parse(raw) as Partial<EngagementData>;
+    // Drop legacy reactions field if present
+    const { ...rest } = parsed as EngagementData & { reactions?: unknown };
+    delete (rest as { reactions?: unknown }).reactions;
+    return { ...DEFAULT_ENGAGEMENT, ...rest };
   } catch {
     return { ...DEFAULT_ENGAGEMENT };
   }
@@ -34,9 +38,7 @@ export function touchReadingSession(
     yesterday.setDate(yesterday.getDate() - 1);
     const yKey = yesterday.toISOString().slice(0, 10);
     if (lastReadDate === yKey) streak += 1;
-    else if (lastReadDate === today) {
-      /* same day */
-    } else streak = 1;
+    else if (lastReadDate !== today) streak = 1;
     lastReadDate = today;
     minutesReadToday = 0;
   }
@@ -58,17 +60,6 @@ export function toggleSave(data: EngagementData, shortId: string): EngagementDat
   if (set.has(shortId)) set.delete(shortId);
   else set.add(shortId);
   return { ...data, savedShortIds: [...set] };
-}
-
-export function setReaction(
-  data: EngagementData,
-  shortId: string,
-  reaction: ReactionKind | null,
-): EngagementData {
-  const reactions = { ...data.reactions };
-  if (reaction) reactions[shortId] = reaction;
-  else delete reactions[shortId];
-  return { ...data, reactions };
 }
 
 export function bumpForYou(data: EngagementData, shortId: string, delta = 1): EngagementData {

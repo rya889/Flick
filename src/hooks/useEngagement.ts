@@ -6,12 +6,11 @@ import {
   dailyGoalProgress,
   loadEngagement,
   saveEngagement,
-  setReaction,
   toggleLike,
   toggleSave,
   touchReadingSession,
 } from "@/lib/engagement";
-import type { EngagementData, ReactionKind } from "@/lib/types";
+import type { EngagementData } from "@/lib/types";
 
 export function useEngagement() {
   const [data, setData] = useState<EngagementData>(() => loadEngagement());
@@ -32,10 +31,6 @@ export function useEngagement() {
     setData((d) => toggleSave(d, shortId));
   }, []);
 
-  const react = useCallback((shortId: string, reaction: ReactionKind | null) => {
-    setData((d) => setReaction(d, shortId, reaction));
-  }, []);
-
   const setSpeed = useCallback((speed: number) => {
     setData((d) => ({ ...d, playbackSpeed: speed }));
   }, []);
@@ -52,7 +47,6 @@ export function useEngagement() {
     recordMinutes,
     like,
     save,
-    react,
     setSpeed,
     setDailyGoal,
   };

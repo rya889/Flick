@@ -1,7 +1,7 @@
 "use client";
 
 import { shortDisplayText } from "@/lib/shorts";
-import type { CatalogBook, ReactionKind, ShortSegment, VoiceMode } from "@/lib/types";
+import type { CatalogBook, ShortSegment, VoiceMode } from "@/lib/types";
 
 interface FeedItem {
   short: ShortSegment;
@@ -14,7 +14,6 @@ interface FeedViewProps {
   voice: VoiceMode;
   liked: Set<string>;
   saved: Set<string>;
-  reactions: Record<string, ReactionKind>;
   onOpenShort: (bookId: string, index: number) => void;
   onLike: (id: string) => void;
   onSave: (id: string) => void;
@@ -25,7 +24,6 @@ export function FeedView({
   voice,
   liked,
   saved,
-  reactions,
   onOpenShort,
   onLike,
   onSave,
@@ -43,7 +41,6 @@ export function FeedView({
       {items.map(({ short, book, score }) => {
         const text = shortDisplayText(short, voice);
         const preview = text.split(/\s+/).slice(0, 42).join(" ");
-        const reaction = reactions[short.id];
         return (
           <article
             key={short.id}
@@ -54,9 +51,11 @@ export function FeedView({
                 className="h-2 w-2 rounded-full"
                 style={{ background: `hsl(${book.coverHue ?? 20} 60% 45%)` }}
               />
-              <span className="font-medium text-[var(--ink)]">r/{book.title.replace(/\s+/g, "")}</span>
+              <span className="font-medium text-[var(--ink)]">
+                r/{book.title.replace(/\s+/g, "")}
+              </span>
               <span>·</span>
-              <span>For You score {Math.round(score)}</span>
+              <span>score {Math.round(score)}</span>
             </div>
             <button
               type="button"
@@ -66,7 +65,7 @@ export function FeedView({
               <h3 className="font-display text-sm font-semibold text-[var(--ink)]">
                 {voice === "viral" ? "Viral cut" : "Passage"} #{short.index + 1}
               </h3>
-              <p className="mt-2 font-serif text-[15px] leading-relaxed text-[var(--ink)]/90">
+              <p className="mt-2 font-serif text-[15px] leading-relaxed text-[var(--ink)]/90 [overflow-wrap:anywhere]">
                 {preview}
                 {text.split(/\s+/).length > 42 ? "…" : ""}
               </p>
@@ -86,9 +85,6 @@ export function FeedView({
               >
                 {saved.has(short.id) ? "Saved" : "Save"}
               </button>
-              {reaction && (
-                <span className="ml-auto text-[var(--ink-muted)]">Reacted</span>
-              )}
             </div>
           </article>
         );

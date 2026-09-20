@@ -48,3 +48,22 @@ body {
   word-break: break-word;
   hyphens: auto;
 }
+
+@keyframes heart-burst {
+  0% {
+    opacity: 0;
+    transform: scale(0.35);
+  }
+  40% {
+    opacity: 1;
+    transform: scale(1.2);
+  }
+  100% {
+    opacity: 0;
+    transform: scale(1.55);
+  }
+}
+
+.heart-burst {
+  animation: heart-burst 0.65s cubic-bezier(0.22, 1, 0.36, 1) both;
+}

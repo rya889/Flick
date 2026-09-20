@@ -184,7 +184,6 @@ export function FlickApp() {
           voice={voice}
           liked={liked}
           saved={saved}
-          reactions={engagement.data.reactions}
           onOpenShort={(bookId, index) => {
             const book = catalog.books.find((b) => b.id === bookId);
             if (!book) return;
@@ -206,12 +205,10 @@ export function FlickApp() {
           playbackSpeed={engagement.data.playbackSpeed}
           liked={liked}
           saved={saved}
-          reactions={engagement.data.reactions}
           onVoiceChange={setVoice}
           onSpeedChange={engagement.setSpeed}
           onLike={engagement.like}
           onSave={engagement.save}
-          onReact={engagement.react}
           onProgress={handleProgress}
           onTickMinutes={engagement.recordMinutes}
           onClose={() => setPlayer(null)}

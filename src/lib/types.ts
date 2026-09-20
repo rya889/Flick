@@ -2,8 +2,6 @@ export type BookFormat = "epub" | "mobi" | "txt" | "paste" | "url" | "sample";
 
 export type VoiceMode = "original" | "viral";
 
-export type ReactionKind = "fire" | "mind" | "heart" | "skull";
-
 export interface ParsedBook {
   id: string;
   title: string;
@@ -43,7 +41,6 @@ export interface EngagementData {
   minutesReadToday: number;
   likedShortIds: string[];
   savedShortIds: string[];
-  reactions: Record<string, ReactionKind>;
   playbackSpeed: number;
   forYouWeights: Record<string, number>;
 }
@@ -64,7 +61,6 @@ export const DEFAULT_ENGAGEMENT: EngagementData = {
   minutesReadToday: 0,
   likedShortIds: [],
   savedShortIds: [],
-  reactions: {},
   playbackSpeed: 1,
   forYouWeights: {},
 };
