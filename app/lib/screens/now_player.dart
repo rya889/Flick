@@ -6,8 +6,40 @@ import '../state/flick_controller.dart';
 import 'paywall_sheet.dart';
 import 'shell.dart';
 
-class NowPlayer extends StatelessWidget {
+class NowPlayer extends StatefulWidget {
   const NowPlayer({super.key});
+
+  @override
+  State<NowPlayer> createState() => _NowPlayerState();
+}
+
+class _NowPlayerState extends State<NowPlayer> {
+  late final PageController _pageController;
+  bool _syncingPage = false;
+
+  @override
+  void initState() {
+    super.initState();
+    final c = context.read<FlickController>();
+    _pageController = PageController(initialPage: c.queueIndex);
+  }
+
+  @override
+  void dispose() {
+    _pageController.dispose();
+    super.dispose();
+  }
+
+  void _syncControllerToPage(FlickController c) {
+    if (!_pageController.hasClients) return;
+    final page = _pageController.page?.round() ?? c.queueIndex;
+    if (page == c.queueIndex) return;
+    _syncingPage = true;
+    _pageController.jumpToPage(
+      c.queueIndex.clamp(0, c.queue.isEmpty ? 0 : c.queue.length - 1),
+    );
+    _syncingPage = false;
+  }
 
   @override
   Widget build(BuildContext context) {
@@ -29,6 +61,10 @@ class NowPlayer extends StatelessWidget {
         ),
       );
     }
+
+    WidgetsBinding.instance.addPostFrameCallback((_) {
+      if (!_syncingPage) _syncControllerToPage(c);
+    });
 
     return Column(
       children: [
@@ -82,74 +118,73 @@ class NowPlayer extends StatelessWidget {
         Expanded(
           child: Stack(
             children: [
-              GestureDetector(
-                behavior: HitTestBehavior.opaque,
-                onVerticalDragEnd: (details) {
-                  final v = details.primaryVelocity ?? 0;
-                  if (v < -200) c.nextShort();
-                  if (v > 200) c.prevShort();
+              PageView.builder(
+                controller: _pageController,
+                scrollDirection: Axis.vertical,
+                itemCount: c.queue.length,
+                onPageChanged: (index) {
+                  if (_syncingPage) return;
+                  c.goToIndex(index);
                 },
-                onDoubleTap: () => c.toggleHeart(),
-                onTapUp: (details) {
-                  final width = MediaQuery.sizeOf(context).width;
-                  final x = details.globalPosition.dx;
-                  if (x < width * 0.28) {
-                    c.prevShort();
-                  } else if (x > width * 0.72) {
-                    c.nextShort();
-                  } else {
-                    c.togglePlay();
-                  }
-                },
-                child: AnimatedSwitcher(
-                  duration: const Duration(milliseconds: 280),
-                  transitionBuilder: (child, anim) {
-                    return FadeTransition(
-                      opacity: anim,
-                      child: SlideTransition(
-                        position: Tween<Offset>(
-                          begin: const Offset(0, 0.06),
-                          end: Offset.zero,
-                        ).animate(anim),
-                        child: child,
-                      ),
-                    );
-                  },
-                  child: Padding(
-                    key: ValueKey(item.short.id + c.contentMode.name + c.tldrSubmode.name),
-                    padding: const EdgeInsets.symmetric(horizontal: 22),
-                    child: Column(
-                      children: [
-                        const SizedBox(height: 8),
-                        Text(
-                          item.book.title,
-                          style: Theme.of(context).textTheme.labelLarge?.copyWith(
-                                color: Theme.of(context).colorScheme.primary,
-                              ),
-                        ),
-                        const SizedBox(height: 16),
-                        Expanded(
-                          child: Center(
-                            child: SingleChildScrollView(
+                itemBuilder: (context, index) {
+                  final feed = c.queue[index];
+                  final active = index == c.queueIndex;
+                  final text = active
+                      ? c.displayText
+                      : feed.short.original;
+                  return GestureDetector(
+                    behavior: HitTestBehavior.opaque,
+                    onDoubleTap: () => c.toggleHeart(feed.short.id),
+                    onTapUp: (details) {
+                      final width = MediaQuery.sizeOf(context).width;
+                      final x = details.globalPosition.dx;
+                      if (x < width * 0.28) {
+                        c.prevShort();
+                      } else if (x > width * 0.72) {
+                        c.nextShort();
+                      } else {
+                        c.togglePlay();
+                      }
+                    },
+                    child: Padding(
+                      padding: const EdgeInsets.symmetric(horizontal: 22),
+                      child: Column(
+                        children: [
+                          const SizedBox(height: 8),
+                          Text(
+                            feed.book.title,
+                            style: Theme.of(context)
+                                .textTheme
+                                .labelLarge
+                                ?.copyWith(
+                                  color:
+                                      Theme.of(context).colorScheme.primary,
+                                ),
+                          ),
+                          const SizedBox(height: 16),
+                          Expanded(
+                            child: Center(
                               child: KaraokeText(
-                                text: c.displayText,
-                                activeIndex: c.karaokeWord,
+                                text: text,
+                                activeIndex:
+                                    active ? c.karaokeWord : text.split(RegExp(r'\s+')).length,
                               ),
                             ),
                           ),
-                        ),
-                        if (!c.playing)
-                          Padding(
-                            padding: const EdgeInsets.only(bottom: 8),
-                            child: Text(
-                              'Paused — tap center · double-tap heart',
-                              style: Theme.of(context).textTheme.bodyMedium,
+                          if (!c.playing && active)
+                            Padding(
+                              padding: const EdgeInsets.only(bottom: 8),
+                              child: Text(
+                                'Paused — tap center · swipe · double-tap heart',
+                                style:
+                                    Theme.of(context).textTheme.bodyMedium,
+                              ),
                             ),
-                          ),
-                      ],
+                        ],
+                      ),
                     ),
-                  ),
-                ),
+                  );
+                },
               ),
               const HeartBurstOverlay(),
             ],

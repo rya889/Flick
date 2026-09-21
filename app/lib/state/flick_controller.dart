@@ -282,6 +282,17 @@ class FlickController extends ChangeNotifier {
     return items;
   }
 
+  void goToIndex(int index) {
+    if (queue.isEmpty) return;
+    queueIndex = index.clamp(0, queue.length - 1);
+    _persistProgress();
+    _resetKaraoke();
+    if (listening && !muted) {
+      unawaited(_speakCurrent());
+    }
+    notifyListeners();
+  }
+
   void nextShort() {
     if (queue.isEmpty) return;
     if (queueIndex >= queue.length - 1) {
