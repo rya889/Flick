@@ -164,10 +164,13 @@ class _NowPlayerState extends State<NowPlayer> {
                           const SizedBox(height: 16),
                           Expanded(
                             child: Center(
-                              child: KaraokeText(
-                                text: text,
-                                activeIndex:
-                                    active ? c.karaokeWord : text.split(RegExp(r'\s+')).length,
+                              child: SingleChildScrollView(
+                                child: KaraokeText(
+                                  text: text,
+                                  activeIndex: active
+                                      ? c.karaokeWord
+                                      : wordsOf(text).length,
+                                ),
                               ),
                             ),
                           ),
@@ -195,6 +198,9 @@ class _NowPlayerState extends State<NowPlayer> {
     );
   }
 }
+
+List<String> wordsOf(String text) =>
+    text.split(RegExp(r'\s+')).where((w) => w.isNotEmpty).toList();
 
 class _ChromeBar extends StatelessWidget {
   const _ChromeBar({required this.item});

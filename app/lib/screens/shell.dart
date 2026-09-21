@@ -175,25 +175,29 @@ class KaraokeText extends StatelessWidget {
   Widget build(BuildContext context) {
     final words = text.split(RegExp(r'\s+')).where((w) => w.isNotEmpty).toList();
     final ink = Theme.of(context).colorScheme.onSurface;
-    return Text.rich(
-      TextSpan(
-        children: [
-          for (var i = 0; i < words.length; i++) ...[
-            TextSpan(
-              text: words[i],
-              style: Theme.of(context).textTheme.bodyLarge?.copyWith(
-                    color: i <= activeIndex
-                        ? ink
-                        : ink.withValues(alpha: 0.34),
-                    fontSize: 22,
-                    height: 1.55,
-                  ),
-            ),
-            if (i < words.length - 1) const TextSpan(text: ' '),
+    return SizedBox(
+      width: double.infinity,
+      child: Text.rich(
+        TextSpan(
+          children: [
+            for (var i = 0; i < words.length; i++) ...[
+              TextSpan(
+                text: words[i],
+                style: Theme.of(context).textTheme.bodyLarge?.copyWith(
+                      color: i <= activeIndex
+                          ? ink
+                          : ink.withValues(alpha: 0.34),
+                      fontSize: 20,
+                      height: 1.55,
+                    ),
+              ),
+              if (i < words.length - 1) const TextSpan(text: ' '),
+            ],
           ],
-        ],
+        ),
+        textAlign: TextAlign.center,
+        softWrap: true,
       ),
-      textAlign: TextAlign.center,
     );
   }
 }
