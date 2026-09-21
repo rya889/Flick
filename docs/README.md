@@ -19,7 +19,7 @@ These documents are the **source of truth** for the Flick redesign. Prefer them 
 | 1 Product | v1.1 | Closed |
 | 2 Backend | v0 | Closed |
 | 3 UI/UX | v0 | Closed |
-| Implementation | Flutter v1 | Not started |
+| Implementation | Flutter prototype | **In progress** — see [`../app/`](../app/) |
 
 ## Change policy
 

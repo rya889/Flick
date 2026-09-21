@@ -1,0 +1,342 @@
+import 'package:flutter/material.dart';
+import 'package:provider/provider.dart';
+
+import '../models/models.dart';
+import '../state/flick_controller.dart';
+import 'paywall_sheet.dart';
+import 'shell.dart';
+
+class NowPlayer extends StatelessWidget {
+  const NowPlayer({super.key});
+
+  @override
+  Widget build(BuildContext context) {
+    final c = context.watch<FlickController>();
+
+    if (c.playMode == PlayMode.bounce && c.books.length < 3) {
+      return const _BounceSoftPrompt();
+    }
+
+    final item = c.current;
+    if (item == null) {
+      return const Center(
+        child: Padding(
+          padding: EdgeInsets.all(24),
+          child: Text(
+            'Add a book in Library to start reading.',
+            textAlign: TextAlign.center,
+          ),
+        ),
+      );
+    }
+
+    return Column(
+      children: [
+        Padding(
+          padding: const EdgeInsets.fromLTRB(16, 8, 16, 0),
+          child: Column(
+            children: [
+              Row(
+                children: [
+                  Text(
+                    'Flick',
+                    style: Theme.of(context).textTheme.headlineSmall,
+                  ),
+                  const Spacer(),
+                  const ModePill(),
+                ],
+              ),
+              const SizedBox(height: 10),
+              const ChapterPips(),
+              const SizedBox(height: 8),
+              Row(
+                children: [
+                  IconButton(
+                    onPressed: c.playMode == PlayMode.story
+                        ? () => c.jumpChapter(-1)
+                        : null,
+                    icon: const Icon(Icons.chevron_left),
+                    tooltip: 'Previous chapter',
+                  ),
+                  Expanded(
+                    child: Text(
+                      item.short.chapterTitle,
+                      textAlign: TextAlign.center,
+                      maxLines: 1,
+                      overflow: TextOverflow.ellipsis,
+                      style: Theme.of(context).textTheme.bodyMedium,
+                    ),
+                  ),
+                  IconButton(
+                    onPressed: c.playMode == PlayMode.story
+                        ? () => c.jumpChapter(1)
+                        : null,
+                    icon: const Icon(Icons.chevron_right),
+                    tooltip: 'Next chapter',
+                  ),
+                ],
+              ),
+            ],
+          ),
+        ),
+        Expanded(
+          child: Stack(
+            children: [
+              GestureDetector(
+                behavior: HitTestBehavior.opaque,
+                onVerticalDragEnd: (details) {
+                  final v = details.primaryVelocity ?? 0;
+                  if (v < -200) c.nextShort();
+                  if (v > 200) c.prevShort();
+                },
+                onDoubleTap: () => c.toggleHeart(),
+                onTapUp: (details) {
+                  final width = MediaQuery.sizeOf(context).width;
+                  final x = details.globalPosition.dx;
+                  if (x < width * 0.28) {
+                    c.prevShort();
+                  } else if (x > width * 0.72) {
+                    c.nextShort();
+                  } else {
+                    c.togglePlay();
+                  }
+                },
+                child: AnimatedSwitcher(
+                  duration: const Duration(milliseconds: 280),
+                  transitionBuilder: (child, anim) {
+                    return FadeTransition(
+                      opacity: anim,
+                      child: SlideTransition(
+                        position: Tween<Offset>(
+                          begin: const Offset(0, 0.06),
+                          end: Offset.zero,
+                        ).animate(anim),
+                        child: child,
+                      ),
+                    );
+                  },
+                  child: Padding(
+                    key: ValueKey(item.short.id + c.contentMode.name + c.tldrSubmode.name),
+                    padding: const EdgeInsets.symmetric(horizontal: 22),
+                    child: Column(
+                      children: [
+                        const SizedBox(height: 8),
+                        Text(
+                          item.book.title,
+                          style: Theme.of(context).textTheme.labelLarge?.copyWith(
+                                color: Theme.of(context).colorScheme.primary,
+                              ),
+                        ),
+                        const SizedBox(height: 16),
+                        Expanded(
+                          child: Center(
+                            child: SingleChildScrollView(
+                              child: KaraokeText(
+                                text: c.displayText,
+                                activeIndex: c.karaokeWord,
+                              ),
+                            ),
+                          ),
+                        ),
+                        if (!c.playing)
+                          Padding(
+                            padding: const EdgeInsets.only(bottom: 8),
+                            child: Text(
+                              'Paused — tap center · double-tap heart',
+                              style: Theme.of(context).textTheme.bodyMedium,
+                            ),
+                          ),
+                      ],
+                    ),
+                  ),
+                ),
+              ),
+              const HeartBurstOverlay(),
+            ],
+          ),
+        ),
+        _ChromeBar(item: item),
+      ],
+    );
+  }
+}
+
+class _ChromeBar extends StatelessWidget {
+  const _ChromeBar({required this.item});
+  final FeedItem item;
+
+  @override
+  Widget build(BuildContext context) {
+    final c = context.watch<FlickController>();
+    final hearted = c.hearts.contains(item.short.id);
+    final saved = c.saves.contains(item.short.id);
+
+    return Container(
+      padding: const EdgeInsets.fromLTRB(12, 8, 12, 12),
+      decoration: BoxDecoration(
+        color: Theme.of(context).colorScheme.surface,
+        border: Border(
+          top: BorderSide(
+            color: Theme.of(context).colorScheme.onSurface.withValues(alpha: 0.08),
+          ),
+        ),
+      ),
+      child: Column(
+        children: [
+          Row(
+            children: [
+              ChoiceChip(
+                label: const Text('Full'),
+                selected: c.contentMode == ContentMode.full,
+                onSelected: (_) => c.setContentMode(ContentMode.full),
+              ),
+              const SizedBox(width: 8),
+              ChoiceChip(
+                label: Text(c.plusActive ? 'TLDR' : 'TLDR · lite'),
+                selected: c.contentMode == ContentMode.tldr,
+                onSelected: (_) {
+                  if (!c.plusActive) {
+                    // Free extractive still allowed
+                    c.setContentMode(ContentMode.tldr);
+                    return;
+                  }
+                  c.setContentMode(ContentMode.tldr);
+                },
+              ),
+              const Spacer(),
+              IconButton(
+                tooltip: c.muted ? 'Unmute / Listen' : 'Mute',
+                onPressed: () async {
+                  final ok = await c.toggleMute();
+                  if (!ok && context.mounted) {
+                    await showPaywallSheet(
+                      context,
+                      reason: PaywallReason.listenCap,
+                    );
+                  }
+                },
+                icon: Icon(c.muted ? Icons.volume_off : Icons.volume_up),
+              ),
+              PopupMenuButton<double>(
+                tooltip: 'Speed',
+                initialValue: c.playbackSpeed,
+                onSelected: c.setPlaybackSpeed,
+                itemBuilder: (context) => const [
+                  PopupMenuItem(value: 0.75, child: Text('0.75x')),
+                  PopupMenuItem(value: 1.0, child: Text('1x')),
+                  PopupMenuItem(value: 1.25, child: Text('1.25x')),
+                  PopupMenuItem(value: 1.5, child: Text('1.5x')),
+                ],
+                child: Padding(
+                  padding: const EdgeInsets.symmetric(horizontal: 8, vertical: 8),
+                  child: Text('${c.playbackSpeed}x'),
+                ),
+              ),
+            ],
+          ),
+          if (c.contentMode == ContentMode.tldr) ...[
+            const SizedBox(height: 8),
+            SegmentedButton<TldrSubmode>(
+              segments: const [
+                ButtonSegment(
+                  value: TldrSubmode.condense,
+                  label: Text('Condense'),
+                ),
+                ButtonSegment(
+                  value: TldrSubmode.summary,
+                  label: Text('Summary'),
+                ),
+                ButtonSegment(
+                  value: TldrSubmode.quotes,
+                  label: Text('Quotes'),
+                ),
+              ],
+              selected: {c.tldrSubmode},
+              onSelectionChanged: (set) {
+                final mode = set.first;
+                if (!c.plusActive && mode != TldrSubmode.condense) {
+                  // Prototype: extractive covers all three; AI paywall tease
+                  showPaywallSheet(context, reason: PaywallReason.aiTldr);
+                }
+                c.setTldrSubmode(mode);
+              },
+            ),
+            if (!c.plusActive)
+              Padding(
+                padding: const EdgeInsets.only(top: 6),
+                child: Text(
+                  'Extractive lite · Plus unlocks AI TLDR',
+                  style: Theme.of(context).textTheme.bodyMedium?.copyWith(fontSize: 12),
+                ),
+              ),
+          ],
+          const SizedBox(height: 8),
+          Row(
+            mainAxisAlignment: MainAxisAlignment.spaceEvenly,
+            children: [
+              IconButton(
+                onPressed: () => c.toggleHeart(),
+                icon: Icon(
+                  hearted ? Icons.favorite : Icons.favorite_border,
+                  color: hearted ? Theme.of(context).colorScheme.primary : null,
+                ),
+              ),
+              IconButton(
+                onPressed: () => c.toggleSave(),
+                icon: Icon(saved ? Icons.bookmark : Icons.bookmark_border),
+              ),
+              IconButton(
+                onPressed: () => c.shareCurrent(),
+                icon: const Icon(Icons.ios_share),
+              ),
+            ],
+          ),
+        ],
+      ),
+    );
+  }
+}
+
+class _BounceSoftPrompt extends StatelessWidget {
+  const _BounceSoftPrompt();
+
+  @override
+  Widget build(BuildContext context) {
+    final c = context.watch<FlickController>();
+    return Padding(
+      padding: const EdgeInsets.all(24),
+      child: Column(
+        crossAxisAlignment: CrossAxisAlignment.stretch,
+        children: [
+          const ModePill(),
+          const Spacer(),
+          Text(
+            'Bounce needs 3 books',
+            style: Theme.of(context).textTheme.headlineMedium,
+            textAlign: TextAlign.center,
+          ),
+          const SizedBox(height: 12),
+          Text(
+            'You have ${c.books.length}. Add the free samples or paste another book to unlock cross-book shorts.',
+            textAlign: TextAlign.center,
+            style: Theme.of(context).textTheme.bodyLarge,
+          ),
+          const SizedBox(height: 24),
+          FilledButton(
+            onPressed: () async {
+              await c.seedSamples();
+              c.enterBounce();
+            },
+            child: const Text('Add sample library'),
+          ),
+          const SizedBox(height: 12),
+          OutlinedButton(
+            onPressed: () => c.setTab(1),
+            child: const Text('Go to Library'),
+          ),
+          const Spacer(),
+        ],
+      ),
+    );
+  }
+}
