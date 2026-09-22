@@ -1,11 +1,11 @@
 {
-    "name": "flick",
-    "short_name": "flick",
+    "name": "Flick",
+    "short_name": "Flick",
     "start_url": ".",
     "display": "standalone",
-    "background_color": "#0175C2",
-    "theme_color": "#0175C2",
-    "description": "A new Flutter project.",
+    "background_color": "#F7F4F1",
+    "theme_color": "#FF3B2E",
+    "description": "The anti-doomscroll reader.",
     "orientation": "portrait-primary",
     "prefer_related_applications": false,
     "icons": [

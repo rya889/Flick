@@ -14,7 +14,19 @@ flutter run -d chrome          # fastest demo in this environment
 # flutter run -d ios
 ```
 
-## Prototype scope
+## Phone test (web)
+
+```bash
+cd app
+flutter build web --release --base-href /
+cp web/vercel.json build/web/
+cd build/web && npx vercel deploy --temporary --yes
+```
+
+Open the printed URL on your phone. If it’s an anonymous deploy, **claim it** from the printed claim link so it doesn’t expire in ~60 minutes.
+
+For a lasting project under your Vercel team: `npx vercel login`, then deploy from `build/web` into project `flick`.
+
 
 | In | Out / stub |
 |----|------------|
