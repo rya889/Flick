@@ -18,6 +18,8 @@ class LibraryBook {
     required this.addedAt,
     this.coverHue = 32,
     this.shortCount = 0,
+    this.fileUri,
+    this.rawTextRef,
   });
 
   final String id;
@@ -28,8 +30,14 @@ class LibraryBook {
   final DateTime addedAt;
   final double coverHue;
   final int shortCount;
+  final String? fileUri;
+  final String? rawTextRef;
 
-  LibraryBook copyWith({int? shortCount}) {
+  LibraryBook copyWith({
+    int? shortCount,
+    String? fileUri,
+    String? rawTextRef,
+  }) {
     return LibraryBook(
       id: id,
       title: title,
@@ -39,6 +47,8 @@ class LibraryBook {
       addedAt: addedAt,
       coverHue: coverHue,
       shortCount: shortCount ?? this.shortCount,
+      fileUri: fileUri ?? this.fileUri,
+      rawTextRef: rawTextRef ?? this.rawTextRef,
     );
   }
 
@@ -51,6 +61,8 @@ class LibraryBook {
         'addedAt': addedAt.toIso8601String(),
         'coverHue': coverHue,
         'shortCount': shortCount,
+        'fileUri': fileUri,
+        'rawTextRef': rawTextRef,
       };
 
   factory LibraryBook.fromJson(Map<String, dynamic> json) {
@@ -63,6 +75,8 @@ class LibraryBook {
       addedAt: DateTime.parse(json['addedAt'] as String),
       coverHue: (json['coverHue'] as num?)?.toDouble() ?? 32,
       shortCount: json['shortCount'] as int? ?? 0,
+      fileUri: json['fileUri'] as String?,
+      rawTextRef: json['rawTextRef'] as String?,
     );
   }
 }
@@ -79,6 +93,8 @@ class ShortSegment {
     required this.wordCount,
     required this.chapterIndex,
     required this.chapterTitle,
+    this.tldrSource = 'extractive',
+    this.contentHash,
   });
 
   final String id;
@@ -91,6 +107,8 @@ class ShortSegment {
   final int wordCount;
   final int chapterIndex;
   final String chapterTitle;
+  final String? tldrSource;
+  final String? contentHash;
 
   Map<String, dynamic> toJson() => {
         'id': id,
@@ -103,6 +121,8 @@ class ShortSegment {
         'wordCount': wordCount,
         'chapterIndex': chapterIndex,
         'chapterTitle': chapterTitle,
+        'tldrSource': tldrSource,
+        'contentHash': contentHash,
       };
 
   factory ShortSegment.fromJson(Map<String, dynamic> json) {
@@ -117,6 +137,8 @@ class ShortSegment {
       wordCount: json['wordCount'] as int,
       chapterIndex: json['chapterIndex'] as int,
       chapterTitle: json['chapterTitle'] as String,
+      tldrSource: json['tldrSource'] as String? ?? 'extractive',
+      contentHash: json['contentHash'] as String?,
     );
   }
 }
@@ -126,16 +148,19 @@ class ReadingProgress {
     required this.bookId,
     required this.shortIndex,
     required this.updatedAt,
+    this.shortId,
   });
 
   final String bookId;
   final int shortIndex;
   final DateTime updatedAt;
+  final String? shortId;
 
   Map<String, dynamic> toJson() => {
         'bookId': bookId,
         'shortIndex': shortIndex,
         'updatedAt': updatedAt.toIso8601String(),
+        'shortId': shortId,
       };
 
   factory ReadingProgress.fromJson(Map<String, dynamic> json) {
@@ -143,6 +168,7 @@ class ReadingProgress {
       bookId: json['bookId'] as String,
       shortIndex: json['shortIndex'] as int,
       updatedAt: DateTime.parse(json['updatedAt'] as String),
+      shortId: json['shortId'] as String?,
     );
   }
 }

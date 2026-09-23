@@ -31,11 +31,13 @@ For a lasting project under your Vercel team: `npx vercel login`, then deploy fr
 | In | Out / stub |
 |----|------------|
 | Story + Bounce player | Real IAP (demo Plus toggle) |
-| Karaoke autoplay, pips, chapter nav | EPUB parser (TXT + paste) |
-| Extractive TLDR submodes | AI TLDR API |
-| OS TTS Listen + 60 min cap UI | Background audio |
-| Hearts, saves, share | Social / accounts |
-| Samples + library | Drift (uses SharedPreferences) |
+| Karaoke autoplay, pips, chapter nav | AI TLDR API |
+| Extractive TLDR submodes | Background audio |
+| OS TTS Listen + 60 min cap UI | Social / accounts |
+| Hearts, saves, share | RevenueCat |
+| Samples + library | — |
+| **EPUB / TXT / paste import** | — |
+| **Drift (SQLite) catalog + progress** | — |
 | Signal Coral theme System/Light/Dark | — |
 
 See `/docs` for the definitive product direction.

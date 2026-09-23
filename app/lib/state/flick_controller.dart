@@ -94,9 +94,9 @@ class FlickController extends ChangeNotifier {
 
   Future<void> bootstrap() async {
     await _store.init();
-    themePreference = _store.themePreference;
-    playbackSpeed = _store.playbackSpeed;
-    plusActive = _store.plusDemo;
+    themePreference = await _store.themePreference;
+    playbackSpeed = await _store.playbackSpeed;
+    plusActive = await _store.plusDemo;
     books = await _store.loadBooks();
     progress = await _store.loadProgress();
     hearts = await _store.loadHearts();
@@ -145,7 +145,6 @@ class FlickController extends ChangeNotifier {
       imported.add(await _store.importSample(sample));
     }
     books = [...imported, ...books];
-    await _store.saveBooks(books);
     for (final book in imported) {
       shortsByBook[book.id] = await _store.loadShorts(book.id);
     }
@@ -155,7 +154,7 @@ class FlickController extends ChangeNotifier {
   }
 
   Future<void> resumeLast() async {
-    final lastId = _store.lastBookId;
+    final lastId = await _store.lastBookId;
     final book = books.cast<LibraryBook?>().firstWhere(
           (b) => b?.id == lastId,
           orElse: () => books.isEmpty ? null : books.first,
@@ -186,7 +185,6 @@ class FlickController extends ChangeNotifier {
     }
     final book = await _store.importSample(sample);
     books = [book, ...books];
-    await _store.saveBooks(books);
     shortsByBook[book.id] = await _store.loadShorts(book.id);
     await openBook(book);
     tabIndex = 0;
@@ -195,8 +193,7 @@ class FlickController extends ChangeNotifier {
 
   Future<void> importPaste(String title, String text) async {
     final book = await _store.importText(title: title, text: text);
-    books = [book, ...books];
-    await _store.saveBooks(books);
+    books = [book, ...books.where((b) => b.id != book.id)];
     shortsByBook[book.id] = await _store.loadShorts(book.id);
     await openBook(book);
     tabIndex = 0;
@@ -211,8 +208,16 @@ class FlickController extends ChangeNotifier {
       source: BookSource.txt,
       hue: 180 + _rng.nextInt(80).toDouble(),
     );
-    books = [book, ...books];
-    await _store.saveBooks(books);
+    books = [book, ...books.where((b) => b.id != book.id)];
+    shortsByBook[book.id] = await _store.loadShorts(book.id);
+    await openBook(book);
+    tabIndex = 0;
+    notifyListeners();
+  }
+
+  Future<void> importEpubFile(String fileName, Uint8List bytes) async {
+    final book = await _store.importEpubBytes(fileName: fileName, bytes: bytes);
+    books = [book, ...books.where((b) => b.id != book.id)];
     shortsByBook[book.id] = await _store.loadShorts(book.id);
     await openBook(book);
     tabIndex = 0;
@@ -475,6 +480,7 @@ class FlickController extends ChangeNotifier {
     if (item == null || playMode != PlayMode.story) return;
     progress[item.book.id] = ReadingProgress(
       bookId: item.book.id,
+      shortId: item.short.id,
       shortIndex: item.short.index,
       updatedAt: DateTime.now(),
     );

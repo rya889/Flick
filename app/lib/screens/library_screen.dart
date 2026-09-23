@@ -1,3 +1,5 @@
+import 'dart:typed_data';
+
 import 'package:file_picker/file_picker.dart';
 import 'package:flutter/material.dart';
 import 'package:provider/provider.dart';
@@ -5,8 +7,15 @@ import 'package:provider/provider.dart';
 import '../models/models.dart';
 import '../state/flick_controller.dart';
 
-class LibraryScreen extends StatelessWidget {
+class LibraryScreen extends StatefulWidget {
   const LibraryScreen({super.key});
+
+  @override
+  State<LibraryScreen> createState() => _LibraryScreenState();
+}
+
+class _LibraryScreenState extends State<LibraryScreen> {
+  bool _importing = false;
 
   @override
   Widget build(BuildContext context) {
@@ -36,14 +45,15 @@ class LibraryScreen extends StatelessWidget {
             runSpacing: 8,
             children: [
               FilledButton.icon(
-                onPressed: () => _showPasteSheet(context),
-                icon: const Icon(Icons.edit_note),
-                label: const Text('Paste text'),
-              ),
-              OutlinedButton.icon(
-                onPressed: () => _pickTxt(context),
-                icon: const Icon(Icons.upload_file),
-                label: const Text('TXT file'),
+                onPressed: _importing ? null : () => _showAddBook(context),
+                icon: _importing
+                    ? const SizedBox(
+                        width: 16,
+                        height: 16,
+                        child: CircularProgressIndicator(strokeWidth: 2),
+                      )
+                    : const Icon(Icons.add),
+                label: Text(_importing ? 'Importing…' : 'Add book'),
               ),
               OutlinedButton.icon(
                 onPressed: () => _showBookmarks(context),
@@ -56,7 +66,10 @@ class LibraryScreen extends StatelessWidget {
         const SizedBox(height: 12),
         Expanded(
           child: c.books.isEmpty
-              ? _EmptyLibrary(onAddSamples: () => c.seedSamples())
+              ? _EmptyLibrary(
+                  onAddBook: () => _showAddBook(context),
+                  onAddSamples: () => c.seedSamples(),
+                )
               : ListView(
                   padding: const EdgeInsets.fromLTRB(16, 0, 16, 24),
                   children: [
@@ -81,6 +94,78 @@ class LibraryScreen extends StatelessWidget {
     );
   }
 
+  Future<void> _showAddBook(BuildContext context) async {
+    final choice = await showModalBottomSheet<String>(
+      context: context,
+      builder: (context) {
+        return SafeArea(
+          child: Column(
+            mainAxisSize: MainAxisSize.min,
+            children: [
+              ListTile(
+                leading: const Icon(Icons.menu_book_outlined),
+                title: const Text('EPUB file'),
+                subtitle: const Text('Import a .epub from your device'),
+                onTap: () => Navigator.pop(context, 'epub'),
+              ),
+              ListTile(
+                leading: const Icon(Icons.upload_file),
+                title: const Text('TXT file'),
+                onTap: () => Navigator.pop(context, 'txt'),
+              ),
+              ListTile(
+                leading: const Icon(Icons.edit_note),
+                title: const Text('Paste text'),
+                onTap: () => Navigator.pop(context, 'paste'),
+              ),
+            ],
+          ),
+        );
+      },
+    );
+    if (!context.mounted || choice == null) return;
+    switch (choice) {
+      case 'epub':
+        await _pickEpub(context);
+      case 'txt':
+        await _pickTxt(context);
+      case 'paste':
+        await _showPasteSheet(context);
+    }
+  }
+
+  Future<void> _pickEpub(BuildContext context) async {
+    final c = context.read<FlickController>();
+    final result = await FilePicker.pickFiles(
+      type: FileType.custom,
+      allowedExtensions: const ['epub'],
+      withData: true,
+    );
+    if (result == null || result.files.isEmpty) return;
+    final file = result.files.first;
+    final bytes = file.bytes;
+    if (bytes == null) {
+      if (context.mounted) {
+        ScaffoldMessenger.of(context).showSnackBar(
+          const SnackBar(content: Text('Could not read EPUB bytes.')),
+        );
+      }
+      return;
+    }
+    setState(() => _importing = true);
+    try {
+      await c.importEpubFile(file.name, Uint8List.fromList(bytes));
+    } catch (e) {
+      if (context.mounted) {
+        ScaffoldMessenger.of(context).showSnackBar(
+          SnackBar(content: Text('EPUB import failed: $e')),
+        );
+      }
+    } finally {
+      if (mounted) setState(() => _importing = false);
+    }
+  }
+
   Future<void> _pickTxt(BuildContext context) async {
     final c = context.read<FlickController>();
     final result = await FilePicker.pickFiles(
@@ -93,7 +178,18 @@ class LibraryScreen extends StatelessWidget {
     final bytes = file.bytes;
     if (bytes == null) return;
     final text = String.fromCharCodes(bytes);
-    await c.importTxtFile(file.name, text);
+    setState(() => _importing = true);
+    try {
+      await c.importTxtFile(file.name, text);
+    } catch (e) {
+      if (context.mounted) {
+        ScaffoldMessenger.of(context).showSnackBar(
+          SnackBar(content: Text('TXT import failed: $e')),
+        );
+      }
+    } finally {
+      if (mounted) setState(() => _importing = false);
+    }
   }
 
   Future<void> _showPasteSheet(BuildContext context) async {
@@ -115,6 +211,11 @@ class LibraryScreen extends StatelessWidget {
             crossAxisAlignment: CrossAxisAlignment.stretch,
             children: [
               Text('Paste a book', style: Theme.of(context).textTheme.titleLarge),
+              const SizedBox(height: 8),
+              Text(
+                'Max 500KB and ~100k words.',
+                style: Theme.of(context).textTheme.bodySmall,
+              ),
               const SizedBox(height: 12),
               TextField(
                 controller: titleCtrl,
@@ -145,10 +246,21 @@ class LibraryScreen extends StatelessWidget {
       },
     );
     if (ok == true && context.mounted) {
-      await context.read<FlickController>().importPaste(
-            titleCtrl.text,
-            bodyCtrl.text,
+      setState(() => _importing = true);
+      try {
+        await context.read<FlickController>().importPaste(
+              titleCtrl.text,
+              bodyCtrl.text,
+            );
+      } catch (e) {
+        if (context.mounted) {
+          ScaffoldMessenger.of(context).showSnackBar(
+            SnackBar(content: Text('$e')),
           );
+        }
+      } finally {
+        if (mounted) setState(() => _importing = false);
+      }
     }
   }
 
@@ -189,7 +301,12 @@ class LibraryScreen extends StatelessWidget {
 }
 
 class _EmptyLibrary extends StatelessWidget {
-  const _EmptyLibrary({required this.onAddSamples});
+  const _EmptyLibrary({
+    required this.onAddBook,
+    required this.onAddSamples,
+  });
+
+  final VoidCallback onAddBook;
   final VoidCallback onAddSamples;
 
   @override
@@ -212,6 +329,11 @@ class _EmptyLibrary extends StatelessWidget {
             ),
             const SizedBox(height: 24),
             FilledButton(
+              onPressed: onAddBook,
+              child: const Text('Add book'),
+            ),
+            const SizedBox(height: 12),
+            OutlinedButton(
               onPressed: onAddSamples,
               child: const Text('Add sample library'),
             ),
@@ -257,6 +379,7 @@ class _BookTile extends StatelessWidget {
       subtitle: Text(
         [
           if (book.author != null) book.author!,
+          book.source.name.toUpperCase(),
           '$shorts shorts',
           if (prog != null) 'Resume #${prog.shortIndex + 1}',
         ].join(' · '),
