@@ -13,17 +13,23 @@ class FlickShell extends StatelessWidget {
 
   @override
   Widget build(BuildContext context) {
-    final c = context.watch<FlickController>();
-    if (!c.ready) {
+    // Only rebuild shell chrome when these change — not on every karaoke tick
+    // (that was remounting the settings FAB and making it flicker).
+    final ready = context.select((FlickController c) => c.ready);
+    final tabIndex = context.select((FlickController c) => c.tabIndex);
+
+    if (!ready) {
       return const Scaffold(
         body: Center(child: CircularProgressIndicator()),
       );
     }
 
+    final showSettingsFab = tabIndex != 1;
+
     return Scaffold(
       body: SafeArea(
         child: IndexedStack(
-          index: c.tabIndex == 2 ? 0 : c.tabIndex,
+          index: tabIndex == 2 ? 0 : tabIndex,
           children: const [
             NowPlayer(),
             LibraryScreen(),
@@ -31,8 +37,9 @@ class FlickShell extends StatelessWidget {
         ),
       ),
       bottomNavigationBar: NavigationBar(
-        selectedIndex: c.tabIndex == 2 ? 2 : c.tabIndex,
+        selectedIndex: tabIndex == 2 ? 2 : tabIndex,
         onDestinationSelected: (i) {
+          final c = context.read<FlickController>();
           if (i == 2) {
             c.enterBounce();
             return;
@@ -57,13 +64,16 @@ class FlickShell extends StatelessWidget {
           ),
         ],
       ),
-      floatingActionButton: c.tabIndex == 1
-          ? null
-          : IconButton.filledTonal(
+      floatingActionButton: showSettingsFab
+          ? FloatingActionButton.small(
               onPressed: () => showSettingsSheet(context),
-              icon: const Icon(Icons.settings_outlined),
               tooltip: 'Settings',
-            ),
+              backgroundColor: FlickColors.signalLight,
+              foregroundColor: Colors.white,
+              elevation: 2,
+              child: const Icon(Icons.settings_outlined),
+            )
+          : null,
       floatingActionButtonLocation: FloatingActionButtonLocation.endFloat,
     );
   }

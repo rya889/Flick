@@ -202,6 +202,11 @@ class _NowPlayerState extends State<NowPlayer> {
 List<String> wordsOf(String text) =>
     text.split(RegExp(r'\s+')).where((w) => w.isNotEmpty).toList();
 
+String _formatSpeed(double speed) {
+  if (speed == speed.roundToDouble()) return speed.toStringAsFixed(0);
+  return speed.toStringAsFixed(2).replaceFirst(RegExp(r'0+$'), '').replaceFirst(RegExp(r'\.$'), '');
+}
+
 class _ChromeBar extends StatelessWidget {
   const _ChromeBar({required this.item});
   final FeedItem item;
@@ -261,16 +266,18 @@ class _ChromeBar extends StatelessWidget {
               PopupMenuButton<double>(
                 tooltip: 'Speed',
                 initialValue: c.playbackSpeed,
-                onSelected: c.setPlaybackSpeed,
-                itemBuilder: (context) => const [
-                  PopupMenuItem(value: 0.75, child: Text('0.75x')),
-                  PopupMenuItem(value: 1.0, child: Text('1x')),
-                  PopupMenuItem(value: 1.25, child: Text('1.25x')),
-                  PopupMenuItem(value: 1.5, child: Text('1.5x')),
+                onSelected: (v) => c.setPlaybackSpeed(v),
+                itemBuilder: (context) => [
+                  for (final speed in const [0.75, 1.0, 1.25, 1.5, 2.0, 2.5, 3.0])
+                    CheckedPopupMenuItem(
+                      value: speed,
+                      checked: (c.playbackSpeed - speed).abs() < 0.01,
+                      child: Text('${_formatSpeed(speed)}x'),
+                    ),
                 ],
                 child: Padding(
                   padding: const EdgeInsets.symmetric(horizontal: 8, vertical: 8),
-                  child: Text('${c.playbackSpeed}x'),
+                  child: Text('${_formatSpeed(c.playbackSpeed)}x'),
                 ),
               ),
             ],

@@ -368,9 +368,11 @@ class FlickController extends ChangeNotifier {
   }
 
   Future<void> setPlaybackSpeed(double value) async {
-    playbackSpeed = value;
-    await _store.setPlaybackSpeed(value);
+    playbackSpeed = value.clamp(0.5, 3.0);
+    await _store.setPlaybackSpeed(playbackSpeed);
     await _configureTts();
+    // Restart karaoke so the new rate applies immediately (not next short).
+    _resetKaraoke();
     notifyListeners();
   }
 
@@ -491,7 +493,8 @@ class FlickController extends ChangeNotifier {
     karaokeWord = -1;
     final words = displayWords;
     if (words.isEmpty) return;
-    final msPerWord = (420 / playbackSpeed).round().clamp(120, 900);
+    // ~420ms/word at 1x; allow up to 3x (~140ms) without clamping away the gain.
+    final msPerWord = (420 / playbackSpeed).round().clamp(100, 900);
     _karaokeTimer = Timer.periodic(Duration(milliseconds: msPerWord), (timer) {
       if (!playing) return;
       karaokeWord += 1;
