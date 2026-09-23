@@ -20,6 +20,16 @@ class SettingsSheet extends StatelessWidget {
   Widget build(BuildContext context) {
     final c = context.watch<FlickController>();
     final remaining = Duration(seconds: c.listenRemainingSeconds);
+    final health = c.tldrHealth;
+    final providers = health == null
+        ? 'checking…'
+        : health.anyProvider
+            ? [
+                if (health.groq) 'Groq',
+                if (health.gemini) 'Gemini',
+                if (health.gateway) 'Gateway',
+              ].join(' · ')
+            : 'no AI keys on server';
 
     return SafeArea(
       child: Padding(
@@ -63,21 +73,30 @@ class SettingsSheet extends StatelessWidget {
             ListTile(
               contentPadding: EdgeInsets.zero,
               title: Text(c.plusActive ? 'Flick Plus · active' : 'Flick Plus'),
-              subtitle: const Text(r'$6.99/mo · $49.99/yr'),
+              subtitle: Text(
+                c.plusService.usesDemo
+                    ? r'$6.99/mo · $49.99/yr · demo / web'
+                    : r'$6.99/mo · $49.99/yr · RevenueCat',
+              ),
               trailing: const Icon(Icons.chevron_right),
               onTap: () => showPaywallSheet(
                 context,
                 reason: PaywallReason.settings,
               ),
             ),
-            if (c.plusActive)
+            ListTile(
+              contentPadding: EdgeInsets.zero,
+              title: const Text('AI TLDR proxy'),
+              subtitle: Text(providers),
+            ),
+            if (c.plusActive && c.plusService.demoActive)
               TextButton(
                 onPressed: () => c.setPlusDemo(false),
                 child: const Text('Turn off Plus demo'),
               ),
             const SizedBox(height: 8),
             Text(
-              'Prototype · OS TTS · extractive TLDR · no accounts',
+              'Local-first · OS TTS · Plus gates AI TLDR',
               style: Theme.of(context).textTheme.bodyMedium?.copyWith(fontSize: 12),
               textAlign: TextAlign.center,
             ),

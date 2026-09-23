@@ -50,6 +50,8 @@ dependencies:
   archive: ^4.3.0
   sqlite3_flutter_libs: ^0.6.0+eol
   crypto: ^3.0.7
+  http: ^1.5.0
+  purchases_flutter: ^9.2.0
 
 dev_dependencies:
   flutter_test:

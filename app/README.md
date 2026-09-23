@@ -14,7 +14,11 @@ flutter run -d chrome          # fastest demo in this environment
 # flutter run -d ios
 ```
 
-## Phone test (web)
+## Phone / durable web
+
+Prefer the **repo-root** Vercel project (Flutter web + `/v1` AI proxy). See [`../docs/04-deploy-and-secrets.md`](../docs/04-deploy-and-secrets.md).
+
+Local one-shot (expires unless claimed):
 
 ```bash
 cd app
@@ -23,21 +27,18 @@ cp web/vercel.json build/web/
 cd build/web && npx vercel deploy --temporary --yes
 ```
 
-Open the printed URL on your phone. If it’s an anonymous deploy, **claim it** from the printed claim link so it doesn’t expire in ~60 minutes.
+## Feature status
 
-For a lasting project under your Vercel team: `npx vercel login`, then deploy from `build/web` into project `flick`.
+| In | Notes |
+|----|-------|
+| Story + Bounce player | — |
+| Karaoke autoplay, pips, chapter nav | — |
+| Extractive TLDR (free) | — |
+| **AI TLDR via `/v1/tldr`** | Plus-gated; needs server AI keys |
+| OS TTS Listen + 60 min cap | Unlimited with Plus |
+| Hearts, saves, share | — |
+| EPUB / TXT / paste + Drift | — |
+| **RevenueCat Plus** | Wired; needs RC + store accounts |
+| Signal Coral theme | — |
 
-
-| In | Out / stub |
-|----|------------|
-| Story + Bounce player | Real IAP (demo Plus toggle) |
-| Karaoke autoplay, pips, chapter nav | AI TLDR API |
-| Extractive TLDR submodes | Background audio |
-| OS TTS Listen + 60 min cap UI | Social / accounts |
-| Hearts, saves, share | RevenueCat |
-| Samples + library | — |
-| **EPUB / TXT / paste import** | — |
-| **Drift (SQLite) catalog + progress** | — |
-| Signal Coral theme System/Light/Dark | — |
-
-See `/docs` for the definitive product direction.
+Out of scope for now: accounts, social, cloud TTS, PDF/MOBI.

@@ -110,6 +110,29 @@ class ShortSegment {
   final String? tldrSource;
   final String? contentHash;
 
+  ShortSegment copyWith({
+    String? condense,
+    String? summary,
+    String? quotes,
+    String? tldrSource,
+    String? contentHash,
+  }) {
+    return ShortSegment(
+      id: id,
+      bookId: bookId,
+      index: index,
+      original: original,
+      condense: condense ?? this.condense,
+      summary: summary ?? this.summary,
+      quotes: quotes ?? this.quotes,
+      wordCount: wordCount,
+      chapterIndex: chapterIndex,
+      chapterTitle: chapterTitle,
+      tldrSource: tldrSource ?? this.tldrSource,
+      contentHash: contentHash ?? this.contentHash,
+    );
+  }
+
   Map<String, dynamic> toJson() => {
         'id': id,
         'bookId': bookId,

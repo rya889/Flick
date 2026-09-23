@@ -7,6 +7,8 @@ import 'package:share_plus/share_plus.dart';
 
 import '../models/models.dart';
 import '../services/catalog_store.dart';
+import '../services/plus_service.dart';
+import '../services/tldr_api.dart';
 
 class FeedItem {
   FeedItem({required this.book, required this.short});
@@ -15,9 +17,16 @@ class FeedItem {
 }
 
 class FlickController extends ChangeNotifier {
-  FlickController(this._store);
+  FlickController(
+    this._store, {
+    PlusService? plus,
+    TldrApi? tldrApi,
+  })  : _plus = plus ?? PlusService(),
+        _tldrApi = tldrApi ?? TldrApi();
 
   final CatalogStore _store;
+  final PlusService _plus;
+  final TldrApi _tldrApi;
   final FlutterTts _tts = FlutterTts();
   final _rng = Random();
 
@@ -43,6 +52,9 @@ class FlickController extends ChangeNotifier {
   bool listening = false;
   bool showHeartBurst = false;
   bool plusActive = false;
+  bool tldrLoading = false;
+  String? tldrError;
+  TldrHealth? tldrHealth;
   double playbackSpeed = 1.0;
   int listenSecondsToday = 0;
   String listenDay = '';
@@ -50,6 +62,10 @@ class FlickController extends ChangeNotifier {
 
   Timer? _karaokeTimer;
   Timer? _listenTimer;
+  final Set<String> _aiInflight = {};
+  final Set<String> _aiDone = {};
+
+  PlusService get plusService => _plus;
 
   static const freeListenCapSeconds = 60 * 60;
 
@@ -94,9 +110,14 @@ class FlickController extends ChangeNotifier {
 
   Future<void> bootstrap() async {
     await _store.init();
+    await _plus.init();
+    // Migrate legacy Drift plusDemo flag into PlusService once.
+    if (!_plus.plusActive && await _store.plusDemo) {
+      await _plus.setDemo(true);
+    }
+    plusActive = _plus.plusActive;
     themePreference = await _store.themePreference;
     playbackSpeed = await _store.playbackSpeed;
-    plusActive = await _store.plusDemo;
     books = await _store.loadBooks();
     progress = await _store.loadProgress();
     hearts = await _store.loadHearts();
@@ -115,6 +136,7 @@ class FlickController extends ChangeNotifier {
     }
 
     await _configureTts();
+    unawaited(_refreshTldrHealth());
 
     if (books.isEmpty) {
       await seedSamples();
@@ -125,6 +147,12 @@ class FlickController extends ChangeNotifier {
     ready = true;
     notifyListeners();
     _startKaraoke();
+    unawaited(ensureAiTldrForCurrent());
+  }
+
+  Future<void> _refreshTldrHealth() async {
+    tldrHealth = await _tldrApi.health();
+    notifyListeners();
   }
 
   Future<void> _configureTts() async {
@@ -296,6 +324,7 @@ class FlickController extends ChangeNotifier {
       unawaited(_speakCurrent());
     }
     notifyListeners();
+    unawaited(ensureAiTldrForCurrent());
   }
 
   void nextShort() {
@@ -316,6 +345,7 @@ class FlickController extends ChangeNotifier {
       unawaited(_speakCurrent());
     }
     notifyListeners();
+    unawaited(ensureAiTldrForCurrent());
   }
 
   void prevShort() {
@@ -327,6 +357,7 @@ class FlickController extends ChangeNotifier {
       unawaited(_speakCurrent());
     }
     notifyListeners();
+    unawaited(ensureAiTldrForCurrent());
   }
 
   void jumpChapter(int delta) {
@@ -358,12 +389,88 @@ class FlickController extends ChangeNotifier {
     contentMode = mode;
     _resetKaraoke();
     notifyListeners();
+    if (mode == ContentMode.tldr) {
+      unawaited(ensureAiTldrForCurrent());
+    }
   }
 
   void setTldrSubmode(TldrSubmode mode) {
     tldrSubmode = mode;
     _resetKaraoke();
     notifyListeners();
+    unawaited(ensureAiTldrForCurrent());
+  }
+
+  /// Plus-only: fetch AI TLDR for the current short (one passage) and cache locally.
+  Future<void> ensureAiTldrForCurrent({bool force = false}) async {
+    if (!plusActive || contentMode != ContentMode.tldr) return;
+    final item = current;
+    if (item == null) return;
+    final short = item.short;
+    final key = '${short.id}:${tldrSubmode.name}';
+    if (_aiInflight.contains(key)) return;
+    if (!force && _aiDone.contains(key)) return;
+
+    final header = _plus.entitlementHeader;
+    if (header.isEmpty) return;
+
+    _aiInflight.add(key);
+    tldrLoading = true;
+    tldrError = null;
+    notifyListeners();
+
+    try {
+      final result = await _tldrApi.request(
+        mode: tldrSubmode,
+        text: short.original,
+        contentHash: short.contentHash,
+        entitlementHeader: header,
+        appUserId: _plus.appUserId,
+      );
+      if (!result.ok || result.text.isEmpty) {
+        tldrError = result.error ?? result.code ?? 'AI TLDR failed';
+        return;
+      }
+
+      final updated = switch (tldrSubmode) {
+        TldrSubmode.condense => short.copyWith(
+            condense: result.text,
+            tldrSource: 'ai',
+          ),
+        TldrSubmode.summary => short.copyWith(
+            summary: result.text,
+            tldrSource: 'ai',
+          ),
+        TldrSubmode.quotes => short.copyWith(
+            quotes: result.text,
+            tldrSource: 'ai',
+          ),
+      };
+      await _replaceShort(updated);
+      _aiDone.add(key);
+      _resetKaraoke();
+    } catch (e) {
+      tldrError = e.toString();
+    } finally {
+      _aiInflight.remove(key);
+      tldrLoading = false;
+      notifyListeners();
+    }
+  }
+
+  Future<void> _replaceShort(ShortSegment updated) async {
+    final list = List<ShortSegment>.from(shortsByBook[updated.bookId] ?? []);
+    final idx = list.indexWhere((s) => s.id == updated.id);
+    if (idx >= 0) {
+      list[idx] = updated;
+    }
+    shortsByBook[updated.bookId] = list;
+    for (var i = 0; i < queue.length; i++) {
+      if (queue[i].short.id == updated.id) {
+        queue[i] = FeedItem(book: queue[i].book, short: updated);
+      }
+    }
+    await _store.updateShort(updated);
   }
 
   Future<void> setThemePreference(ThemePreference value) async {
@@ -470,9 +577,39 @@ class FlickController extends ChangeNotifier {
   }
 
   Future<void> setPlusDemo(bool value) async {
-    plusActive = value;
+    await _plus.setDemo(value);
+    plusActive = _plus.plusActive;
     await _store.setPlusDemo(value);
     notifyListeners();
+    if (plusActive) {
+      unawaited(ensureAiTldrForCurrent());
+    }
+  }
+
+  Future<bool> purchasePlusMonthly() async {
+    final ok = await _plus.purchaseMonthly();
+    plusActive = _plus.plusActive;
+    await _store.setPlusDemo(_plus.demoActive);
+    notifyListeners();
+    if (plusActive) unawaited(ensureAiTldrForCurrent());
+    return ok;
+  }
+
+  Future<bool> purchasePlusYearly() async {
+    final ok = await _plus.purchaseYearly();
+    plusActive = _plus.plusActive;
+    await _store.setPlusDemo(_plus.demoActive);
+    notifyListeners();
+    if (plusActive) unawaited(ensureAiTldrForCurrent());
+    return ok;
+  }
+
+  Future<bool> restorePurchases() async {
+    final ok = await _plus.restore();
+    plusActive = _plus.plusActive;
+    notifyListeners();
+    if (plusActive) unawaited(ensureAiTldrForCurrent());
+    return ok;
   }
 
   void _persistProgress() {

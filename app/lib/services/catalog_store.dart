@@ -126,6 +126,10 @@ class CatalogStore {
   Future<void> setPlusDemo(bool value) =>
       _setMeta('plusDemo', value ? 'true' : 'false');
 
+  Future<void> updateShort(ShortSegment short) async {
+    await _db.into(_db.shorts).insertOnConflictUpdate(_shortCompanion(short));
+  }
+
   Future<ThemePreference> get themePreference async {
     final name = await _getMeta('theme');
     if (name == null) return ThemePreference.system;

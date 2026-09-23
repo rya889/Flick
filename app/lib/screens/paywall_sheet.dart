@@ -16,14 +16,40 @@ Future<void> showPaywallSheet(
   );
 }
 
-class PaywallSheet extends StatelessWidget {
+class PaywallSheet extends StatefulWidget {
   const PaywallSheet({super.key, required this.reason});
   final PaywallReason reason;
 
   @override
+  State<PaywallSheet> createState() => _PaywallSheetState();
+}
+
+class _PaywallSheetState extends State<PaywallSheet> {
+  bool _busy = false;
+  String? _error;
+
+  Future<void> _run(Future<bool> Function() action) async {
+    setState(() {
+      _busy = true;
+      _error = null;
+    });
+    final ok = await action();
+    if (!mounted) return;
+    final c = context.read<FlickController>();
+    setState(() {
+      _busy = false;
+      if (!ok) {
+        _error = c.plusService.lastError ?? 'Purchase unavailable';
+      }
+    });
+    if (ok && mounted) Navigator.pop(context);
+  }
+
+  @override
   Widget build(BuildContext context) {
     final c = context.watch<FlickController>();
-    final headline = switch (reason) {
+    final demo = c.plusService.usesDemo;
+    final headline = switch (widget.reason) {
       PaywallReason.listenCap => 'Keep listening',
       PaywallReason.aiTldr => 'Unlock AI TLDR',
       PaywallReason.settings => 'Flick Plus',
@@ -51,28 +77,55 @@ class PaywallSheet extends StatelessWidget {
             ),
             const SizedBox(height: 20),
             FilledButton(
-              onPressed: () async {
-                await c.setPlusDemo(true);
-                if (context.mounted) Navigator.pop(context);
-              },
-              child: const Text(r'Start Plus · $6.99/mo (demo)'),
+              onPressed: _busy ? null : () => _run(c.purchasePlusMonthly),
+              child: Text(
+                demo
+                    ? r'Start Plus · $6.99/mo (demo)'
+                    : r'Start Plus · $6.99/mo',
+              ),
             ),
             const SizedBox(height: 8),
             OutlinedButton(
-              onPressed: () async {
-                await c.setPlusDemo(true);
-                if (context.mounted) Navigator.pop(context);
-              },
-              child: const Text(r'Yearly · $49.99 · 7-day trial (demo)'),
+              onPressed: _busy ? null : () => _run(c.purchasePlusYearly),
+              child: Text(
+                demo
+                    ? r'Yearly · $49.99 · 7-day trial (demo)'
+                    : r'Yearly · $49.99 · 7-day trial',
+              ),
             ),
+            if (!demo) ...[
+              const SizedBox(height: 8),
+              TextButton(
+                onPressed: _busy ? null : () => _run(c.restorePurchases),
+                child: const Text('Restore purchases'),
+              ),
+            ],
             const SizedBox(height: 8),
             TextButton(
-              onPressed: () => Navigator.pop(context),
+              onPressed: _busy ? null : () => Navigator.pop(context),
               child: const Text('Not now'),
             ),
+            if (_busy)
+              const Padding(
+                padding: EdgeInsets.only(top: 8),
+                child: Center(child: CircularProgressIndicator()),
+              ),
+            if (_error != null)
+              Padding(
+                padding: const EdgeInsets.only(top: 8),
+                child: Text(
+                  _error!,
+                  textAlign: TextAlign.center,
+                  style: Theme.of(context).textTheme.bodyMedium?.copyWith(
+                        color: Theme.of(context).colorScheme.error,
+                      ),
+                ),
+              ),
             if (c.plusActive)
               Text(
-                'Plus demo is active on this device.',
+                demo
+                    ? 'Plus demo is active on this device.'
+                    : 'Flick Plus is active.',
                 textAlign: TextAlign.center,
                 style: Theme.of(context).textTheme.bodyMedium,
               ),

@@ -302,18 +302,44 @@ class _ChromeBar extends StatelessWidget {
               selected: {c.tldrSubmode},
               onSelectionChanged: (set) {
                 final mode = set.first;
-                if (!c.plusActive && mode != TldrSubmode.condense) {
-                  // Prototype: extractive covers all three; AI paywall tease
+                c.setTldrSubmode(mode);
+                if (c.plusActive) {
+                  // AI fetch is triggered by setTldrSubmode
+                } else if (mode != TldrSubmode.condense) {
+                  // Extractive still works; show Plus tease for AI quality.
                   showPaywallSheet(context, reason: PaywallReason.aiTldr);
                 }
-                c.setTldrSubmode(mode);
               },
             ),
+            if (c.tldrLoading)
+              const Padding(
+                padding: EdgeInsets.only(top: 8),
+                child: LinearProgressIndicator(minHeight: 2),
+              ),
             if (!c.plusActive)
               Padding(
                 padding: const EdgeInsets.only(top: 6),
                 child: Text(
                   'Extractive lite · Plus unlocks AI TLDR',
+                  style: Theme.of(context).textTheme.bodyMedium?.copyWith(fontSize: 12),
+                ),
+              )
+            else if (c.tldrError != null)
+              Padding(
+                padding: const EdgeInsets.only(top: 6),
+                child: Text(
+                  c.tldrError!,
+                  style: Theme.of(context).textTheme.bodyMedium?.copyWith(
+                        fontSize: 12,
+                        color: Theme.of(context).colorScheme.error,
+                      ),
+                ),
+              )
+            else if (c.current?.short.tldrSource == 'ai')
+              Padding(
+                padding: const EdgeInsets.only(top: 6),
+                child: Text(
+                  'AI TLDR',
                   style: Theme.of(context).textTheme.bodyMedium?.copyWith(fontSize: 12),
                 ),
               ),
