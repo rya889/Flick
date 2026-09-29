@@ -1,4 +1,4 @@
-package com.flick.flick
+package com.rya889.flick
 
 import io.flutter.embedding.android.FlutterActivity
 

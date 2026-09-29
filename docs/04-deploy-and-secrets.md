@@ -1,5 +1,30 @@
 # Flick — Deploy & secrets
 
+## iOS device run (physical iPhone)
+
+Requires Mac + Xcode. This repo targets **iOS 15+** and bundle id **`com.rya889.flick`**.
+
+```bash
+cd app
+flutter pub get
+cd ios && pod install && cd ..
+open ios/Runner.xcworkspace
+```
+
+In Xcode: **Runner → Signing & Capabilities → Team** (your Apple ID). Then:
+
+```bash
+flutter run -d ios
+```
+
+If Pods still complain about an old deployment target, wipe and reinstall:
+
+```bash
+cd app/ios
+rm -rf Pods Podfile.lock
+pod install
+```
+
 ## Durable web (Vercel)
 
 Repo root deploys Flutter web + `/v1/*` AI proxy:
