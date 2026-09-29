@@ -88,6 +88,10 @@ open ios/Runner.xcworkspace
 
 In Xcode: **Runner → Signing & Capabilities → Team** (your Apple ID). Then use the pull-and-run steps above.
 
+### UIScene lifecycle (Xcode 27 / iOS 27 SDK)
+
+Apple requires the **UIScene** app lifecycle on upcoming iOS versions. This repo adopts it via `UIApplicationSceneManifest` in `Info.plist` and `FlutterImplicitEngineDelegate` in `AppDelegate.swift` (see [Flutter UIScene migration](https://docs.flutter.dev/release/breaking-changes/uiscenedelegate)).
+
 If Pods still complain about an old deployment target, wipe and reinstall:
 
 ```bash
