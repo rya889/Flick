@@ -6,6 +6,18 @@ Requires Mac + Xcode. This repo targets **iOS 15+** and bundle id **`com.rya889.
 
 ### Pull latest build onto your phone (includes fixing local git blockers)
 
+**Every test run — discard all local changes and match the branch:**
+
+```bash
+cd ~/dev/Flick && bash scripts/hard-sync-test.sh && cd app && flutter run -d rPhone17 --release
+```
+
+One-liner without the script (same effect):
+
+```bash
+cd ~/dev/Flick && git fetch origin cursor/fix-ios-deploy-target-983e && git checkout cursor/fix-ios-deploy-target-983e && git reset --hard origin/cursor/fix-ios-deploy-target-983e && git clean -fd && cd app && flutter pub get && rm -rf ios/Pods ios/Podfile.lock ios/.symlinks build/ios && (cd ios && pod install --repo-update) && flutter clean && flutter run -d rPhone17 --release
+```
+
 Feature work lives on branch **`cursor/fix-ios-deploy-target-983e`** until merged to `main`.  
 A **release** install is required to see UI changes on the home-screen icon; debug builds need `flutter run` attached.
 
