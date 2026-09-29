@@ -23,5 +23,9 @@ CODE_SIGN_STYLE=Automatic
 EOF
 
 echo "Wrote $OUT"
-echo "You can rebuild with: cd app && flutter run -d <device> --release"
+echo ""
+echo "Next (required so Pods use the same Team):"
+echo "  bash scripts/ios-reinstall-pods.sh"
+echo ""
+echo "Then: cd app && flutter run -d <device> --release"
 echo "(No need to re-pick Team in Xcode unless you change Apple accounts.)"

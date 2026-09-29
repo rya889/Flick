@@ -27,6 +27,18 @@ require File.expand_path(File.join('packages', 'flutter_tools', 'bin', 'podhelpe
 
 flutter_ios_podfile_setup
 
+def flick_development_team
+  signing = File.expand_path('Flutter/Signing.local.xcconfig', __dir__)
+  return nil unless File.exist?(signing)
+
+  File.foreach(signing) do |line|
+    next if line.strip.start_with?('//', '#')
+    m = line.match(/DEVELOPMENT_TEAM\s*=\s*([A-Z0-9]{10})/)
+    return m[1] if m
+  end
+  nil
+end
+
 target 'Runner' do
   use_frameworks! :linkage => :static
 
@@ -41,13 +53,32 @@ target 'Runner' do
 end
 
 post_install do |installer|
+  team = flick_development_team
   installer.pods_project.targets.each do |target|
     flutter_additional_ios_build_settings(target)
     target.build_configurations.each do |config|
       if config.build_settings['IPHONEOS_DEPLOYMENT_TARGET'].to_f < 15.0
         config.build_settings['IPHONEOS_DEPLOYMENT_TARGET'] = '15.0'
       end
+      if team
+        config.build_settings['DEVELOPMENT_TEAM'] = team
+        config.build_settings['CODE_SIGN_STYLE'] = 'Automatic'
+      end
     end
+  end
+
+  if team
+    installer.pods_project.build_configurations.each do |config|
+      config.build_settings['DEVELOPMENT_TEAM'] = team
+    end
+    Pod::UI.puts "Pods DEVELOPMENT_TEAM=#{team} (from Flutter/Signing.local.xcconfig)"
+  else
+    Pod::UI.puts <<~WARN
+
+      ⚠️  No app/ios/Flutter/Signing.local.xcconfig — device install often fails after build.
+      Run from repo root:  FLICK_IOS_TEAM=YOUR10CHARID bash scripts/ios-configure-signing.sh
+      Then:  cd app/ios && pod install
+    WARN
   end
 
   lock_path = File.join(__dir__, 'Podfile.lock')

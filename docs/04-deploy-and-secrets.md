@@ -81,6 +81,34 @@ flutter run -d rPhone17 --release -v 2>&1 | tee /tmp/flick-ios.log
 
 Or in Xcode: **Window → Devices and Simulators → your iPhone → Open Console**, filter `Runner` / `Flick`, launch the app, copy the crash lines.
 
+### “Xcode build done” but Flutter cannot install / launch
+
+Build succeeded; **install or launch** failed. Run the checklist:
+
+```bash
+cd ~/dev/Flick
+bash scripts/ios-device-doctor.sh
+```
+
+Most common fixes:
+
+1. **Signing file + pods** (if you skipped this after hard sync):
+   ```bash
+   FLICK_IOS_TEAM=YOUR10CHARID bash scripts/ios-configure-signing.sh
+   bash scripts/ios-reinstall-pods.sh
+   cd app && flutter run -d rPhone17 --release
+   ```
+2. **Developer Mode** on the iPhone (iOS 16+): Settings → Privacy & Security → Developer Mode → On (reboot if prompted).
+3. **Unlock the phone** while Flutter shows “Installing and launching…”.
+4. **Register the device profile once** in Xcode: `open app/ios/Runner.xcworkspace` → select **rPhone17** at the top → **Product → Run**. After that, `flutter run --release` usually works without opening Xcode again.
+5. **Verbose log** to see the real error (provisioning vs crash):
+   ```bash
+   cd app && flutter run -d 00008150-000C10D62687801C --release -v 2>&1 | tee /tmp/flick-ios-run.log
+   ```
+6. Prefer **USB** if wireless deploy fails; retry with the UDID: `-d 00008150-000C10D62687801C`.
+
+If the **Flick icon appears** on the home screen but Flutter still errors, open the app manually — if it crashes immediately, use **Devices → Open Console** (not a signing issue).
+
 After pulling crash fixes, **re-run pods** (Podfile pins RevenueCat + static frameworks):
 
 ```bash
