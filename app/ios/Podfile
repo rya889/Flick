@@ -31,6 +31,10 @@ target 'Runner' do
   use_frameworks!
 
   flutter_install_all_ios_pods File.dirname(File.realpath(__FILE__))
+  # Force Xcode 26/27-safe RevenueCat (PaywallColor init fix shipped in 5.78.0).
+  # If this conflicts, your Flutter plugin is still on purchases_flutter 9.x —
+  # run `flutter pub get` and delete ios/Pods + ios/Podfile.lock.
+  pod 'RevenueCat', '5.90.2'
   target 'RunnerTests' do
     inherit! :search_paths
   end
@@ -43,6 +47,25 @@ post_install do |installer|
       if config.build_settings['IPHONEOS_DEPLOYMENT_TARGET'].to_f < 15.0
         config.build_settings['IPHONEOS_DEPLOYMENT_TARGET'] = '15.0'
       end
+    end
+  end
+
+  lock_path = File.join(__dir__, 'Podfile.lock')
+  if File.exist?(lock_path)
+    lock = File.read(lock_path)
+    if lock =~ /RevenueCat \((\d+\.\d+\.\d+)\)/
+      version = Gem::Version.new(Regexp.last_match(1))
+      if version < Gem::Version.new('5.78.0')
+        raise <<~MSG
+
+          RevenueCat #{version} is too old for this Xcode (PaywallColor init error).
+          Need >= 5.78.0. From app/:
+            flutter pub get
+            rm -rf ios/Pods ios/Podfile.lock ios/.symlinks
+            cd ios && pod install
+        MSG
+      end
+      Pod::UI.puts "Using RevenueCat #{version}"
     end
   end
 end
