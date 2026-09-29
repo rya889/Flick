@@ -75,7 +75,15 @@ After pulling crash fixes, **re-run pods** (Podfile pins RevenueCat + static fra
 bash scripts/ios-reinstall-pods.sh
 ```
 
-If Xcode reports **SwiftUICore** linker errors, your `Runner` target picked up a bad flag — open **Build Settings → Other Linker Flags** and remove `-weak_framework SwiftUICore`, then `pod install` again from a clean Podfile.
+If Xcode reports **SwiftUICore** linker errors, an old pod install added a flag Xcode rejects. From repo root:
+
+```bash
+bash scripts/strip-swiftuicore-linker.sh
+# or restore a clean project file:
+git restore app/ios/Runner.xcodeproj/project.pbxproj
+```
+
+Then in Xcode: **Runner → Build Settings → Other Linker Flags** — ensure **`-weak_framework SwiftUICore` is not listed**.
 
 ### First-time signing
 

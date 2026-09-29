@@ -14,6 +14,8 @@ echo "==> wiping ios/Pods + Podfile.lock"
 rm -rf ios/Pods ios/Podfile.lock ios/.symlinks
 rm -rf "$HOME/Library/Developer/Xcode/DerivedData"/Runner-* 2>/dev/null || true
 
+bash "$ROOT/scripts/strip-swiftuicore-linker.sh" || true
+
 cd ios
 # RevenueCat is on the CocoaPods CDN (trunk) — there is no "RevenueCat" spec repo.
 pod install --repo-update
