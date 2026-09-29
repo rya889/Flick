@@ -24,5 +24,10 @@ flutter clean
 
 echo ""
 echo "Ready at: $(git -C "$ROOT" log -1 --oneline)"
+if [[ ! -f "$ROOT/app/ios/Flutter/Signing.local.xcconfig" ]]; then
+  echo ""
+  echo "Tip: To avoid re-signing in Xcode after every sync, run once:"
+  echo "  FLICK_IOS_TEAM=YOUR10CHARID bash scripts/ios-configure-signing.sh"
+fi
 echo "Run:  cd app && flutter run -d rPhone17 --release"
 echo "      (or set FLICK_DEVICE=your_device_name)"

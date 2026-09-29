@@ -97,7 +97,23 @@ git restore app/ios/Runner.xcodeproj/project.pbxproj
 
 Then in Xcode: **Runner → Build Settings → Other Linker Flags** — ensure **`-weak_framework SwiftUICore` is not listed**.
 
-### First-time signing
+### First-time signing (once per Mac)
+
+Xcode stores your **Team** in `project.pbxproj` if you pick it in the UI. Our test scripts run **`git reset --hard`**, which **removes that Team** every pull — so Xcode asks you to sign again.
+
+**Fix:** keep Team ID in a **gitignored local file** (survives hard sync):
+
+```bash
+cd ~/dev/Flick
+# Team ID = 10-character id from Xcode → Runner → Signing, or Apple Developer membership
+FLICK_IOS_TEAM=YOURTEAMID bash scripts/ios-configure-signing.sh
+```
+
+Then use **`flutter run`** (or `hard-sync-test.sh`) — you should **not** need to open Xcode to re-select Team after each agent update.
+
+Optional manual setup: copy `app/ios/Flutter/Signing.local.xcconfig.example` → `Signing.local.xcconfig` and replace `XXXXXXXXXX` with your Team ID.
+
+If Xcode still nags, open the workspace once to refresh profiles (not every pull):
 
 ```bash
 cd app
@@ -106,7 +122,7 @@ cd ios && pod install && cd ..
 open ios/Runner.xcworkspace
 ```
 
-In Xcode: **Runner → Signing & Capabilities → Team** (your Apple ID). Then use the pull-and-run steps above.
+**iPhone “Untrusted Developer”** (Settings → General → VPN & Device Management) is separate: you only re-trust when the **certificate or bundle id changes**, not on every Dart code update. Keep **`com.rya889.flick`** and the same Apple ID to avoid repeating that step.
 
 ### UIScene lifecycle (Xcode 27 / iOS 27 SDK)
 

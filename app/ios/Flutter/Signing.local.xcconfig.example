@@ -1,0 +1,8 @@
+// Copy to Signing.local.xcconfig (gitignored) or run:
+//   FLICK_IOS_TEAM=YOUR10CHARID bash scripts/ios-configure-signing.sh
+//
+// Team ID: Xcode → Runner → Signing & Capabilities (parentheses next to team name),
+// or https://developer.apple.com/account → Membership details.
+
+DEVELOPMENT_TEAM=XXXXXXXXXX
+CODE_SIGN_STYLE=Automatic
