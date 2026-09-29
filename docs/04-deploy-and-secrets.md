@@ -4,6 +4,64 @@
 
 Requires Mac + Xcode. This repo targets **iOS 15+** and bundle id **`com.rya889.flick`**.
 
+### Pull latest build onto your phone (includes fixing local git blockers)
+
+Feature work lives on branch **`cursor/fix-ios-deploy-target-983e`** until merged to `main`.  
+A **release** install is required to see UI changes on the home-screen icon; debug builds need `flutter run` attached.
+
+**One script (recommended):**
+
+```bash
+cd ~/dev/Flick
+FLICK_IOS_DEVICE=rPhone17 bash scripts/iphone-pull-and-run.sh
+```
+
+**Same steps manually** — run from repo root. These lines **discard local edits** that usually block `git pull` (Xcode, `pub get`, etc.):
+
+```bash
+cd ~/dev/Flick
+git fetch origin cursor/fix-ios-deploy-target-983e
+
+# Drop local changes on files that conflict with the branch
+git restore --source=HEAD --staged --worktree \
+  app/pubspec.lock \
+  app/pubspec.yaml \
+  app/ios/Flutter/AppFrameworkInfo.plist \
+  app/ios/Runner.xcodeproj/project.pbxproj \
+  app/ios/Runner/Info.plist
+
+# If checkout complained about untracked Podfile:
+rm -f app/ios/Podfile
+
+git checkout cursor/fix-ios-deploy-target-983e
+git pull origin cursor/fix-ios-deploy-target-983e
+
+# Confirm you have the new build (Library-first + Brief label):
+grep -n "tabIndex = 1" app/lib/state/flick_controller.dart
+grep -n "Brief" app/lib/screens/now_player.dart
+git log -1 --oneline
+
+bash scripts/ios-reinstall-pods.sh
+cd app
+flutter clean
+rm -rf build/ios
+flutter run -d rPhone17 --release
+```
+
+**If you need to keep local edits** instead of discarding:
+
+```bash
+git stash push -u -m "wip before flick pull"
+git checkout cursor/fix-ios-deploy-target-983e
+git pull origin cursor/fix-ios-deploy-target-983e
+# … build as above …
+git stash pop   # optional; may conflict
+```
+
+**If the phone still shows old UI:** force-quit Flick, then run `flutter run … --release` again (do not rely on an old debug install).
+
+### First-time signing
+
 ```bash
 cd app
 flutter pub get
@@ -11,11 +69,7 @@ cd ios && pod install && cd ..
 open ios/Runner.xcworkspace
 ```
 
-In Xcode: **Runner → Signing & Capabilities → Team** (your Apple ID). Then:
-
-```bash
-flutter run -d ios
-```
+In Xcode: **Runner → Signing & Capabilities → Team** (your Apple ID). Then use the pull-and-run steps above.
 
 If Pods still complain about an old deployment target, wipe and reinstall:
 

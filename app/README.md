@@ -14,6 +14,17 @@ flutter run -d chrome          # fastest demo in this environment
 # flutter run -d ios
 ```
 
+## iPhone (physical device)
+
+See **[`../docs/04-deploy-and-secrets.md`](../docs/04-deploy-and-secrets.md)** — section *Pull latest build onto your phone* (includes `git restore` for local changes + `scripts/iphone-pull-and-run.sh`).
+
+Quick:
+
+```bash
+cd ~/dev/Flick
+FLICK_IOS_DEVICE=rPhone17 bash scripts/iphone-pull-and-run.sh
+```
+
 ## Phone / durable web
 
 Prefer the **repo-root** Vercel project (Flutter web + `/v1` AI proxy). See [`../docs/04-deploy-and-secrets.md`](../docs/04-deploy-and-secrets.md).
