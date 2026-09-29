@@ -15,7 +15,7 @@ rm -rf ios/Pods ios/Podfile.lock ios/.symlinks
 rm -rf "$HOME/Library/Developer/Xcode/DerivedData"/Runner-* 2>/dev/null || true
 
 cd ios
-pod repo update RevenueCat 2>/dev/null || pod repo update || true
+# RevenueCat is on the CocoaPods CDN (trunk) — there is no "RevenueCat" spec repo.
 pod install --repo-update
 
 echo "==> RevenueCat resolved to:"
