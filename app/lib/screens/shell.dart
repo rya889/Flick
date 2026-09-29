@@ -26,15 +26,11 @@ class FlickShell extends StatelessWidget {
 
     final showSettingsFab = tabIndex != 1;
 
+    final playerTab = tabIndex == 2 || tabIndex == 0;
+
     return Scaffold(
       body: SafeArea(
-        child: IndexedStack(
-          index: tabIndex == 2 ? 0 : tabIndex,
-          children: const [
-            NowPlayer(),
-            LibraryScreen(),
-          ],
-        ),
+        child: playerTab ? const NowPlayer() : const LibraryScreen(),
       ),
       bottomNavigationBar: NavigationBar(
         selectedIndex: tabIndex == 2 ? 2 : tabIndex,

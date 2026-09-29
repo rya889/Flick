@@ -66,6 +66,7 @@ class FlickController extends ChangeNotifier {
   Timer? _listenTimer;
   final Set<String> _aiInflight = {};
   final Set<String> _aiDone = {};
+  bool _ttsConfigured = false;
 
   PlusService get plusService => _plus;
 
@@ -118,10 +119,18 @@ class FlickController extends ChangeNotifier {
 
   Future<void> bootstrap() async {
     await _store.init();
-    await _plus.init();
+    try {
+      await _plus.init();
+    } catch (e, st) {
+      debugPrint('Flick Plus init failed (non-fatal): $e\n$st');
+    }
     // Migrate legacy Drift plusDemo flag into PlusService once.
     if (!_plus.plusActive && await _store.plusDemo) {
-      await _plus.setDemo(true);
+      try {
+        await _plus.setDemo(true);
+      } catch (e, st) {
+        debugPrint('Flick Plus demo migrate failed: $e\n$st');
+      }
     }
     plusActive = _plus.plusActive;
     themePreference = await _store.themePreference;
@@ -143,23 +152,32 @@ class FlickController extends ChangeNotifier {
       shortsByBook[book.id] = await _store.loadShorts(book.id);
     }
 
-    await _configureTts();
     unawaited(_refreshTldrHealth());
 
     if (books.isEmpty) {
       await seedSamples();
-    } else {
-      await _store.refreshExtractiveTldrIfNeeded(books, shortsByBook);
-      // Reload shorts after extractive refresh.
-      for (final book in books) {
-        shortsByBook[book.id] = await _store.loadShorts(book.id);
-      }
     }
 
     tabIndex = 1;
     playing = false;
     ready = true;
     notifyListeners();
+
+    // Heavy migration after first frame — must not block or crash launch.
+    unawaited(_refreshExtractiveTldrInBackground());
+  }
+
+  Future<void> _refreshExtractiveTldrInBackground() async {
+    if (books.isEmpty) return;
+    try {
+      await _store.refreshExtractiveTldrIfNeeded(books, shortsByBook);
+      for (final book in books) {
+        shortsByBook[book.id] = await _store.loadShorts(book.id);
+      }
+      notifyListeners();
+    } catch (e, st) {
+      debugPrint('Flick extractive TLDR refresh failed (non-fatal): $e\n$st');
+    }
   }
 
   Future<void> _refreshTldrHealth() async {
@@ -168,6 +186,7 @@ class FlickController extends ChangeNotifier {
   }
 
   Future<void> _configureTts() async {
+    if (_ttsConfigured) return;
     try {
       // iPhone silent switch mutes ambient; playback category is required for Listen.
       if (!kIsWeb && defaultTargetPlatform == TargetPlatform.iOS) {
@@ -191,6 +210,7 @@ class FlickController extends ChangeNotifier {
       await _tts.setVolume(1.0);
       await _tts.setPitch(1.0);
       await _tts.awaitSpeakCompletion(true);
+      _ttsConfigured = true;
     } catch (e, st) {
       debugPrint('Flick TTS configure failed: $e\n$st');
     }
@@ -580,6 +600,7 @@ class FlickController extends ChangeNotifier {
   Future<void> _speakCurrent() async {
     if (muted || listenCapped) return;
     try {
+      await _configureTts();
       await _tts.stop();
       if (!kIsWeb && defaultTargetPlatform == TargetPlatform.iOS) {
         await _tts.setIosAudioCategory(

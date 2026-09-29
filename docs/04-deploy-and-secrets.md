@@ -60,6 +60,21 @@ git stash pop   # optional; may conflict
 
 **If the phone still shows old UI:** force-quit Flick, then run `flutter run … --release` again (do not rely on an old debug install).
 
+**If Flick crashes on launch:** capture logs while reproducing:
+
+```bash
+cd ~/dev/Flick/app
+flutter run -d rPhone17 --release -v 2>&1 | tee /tmp/flick-ios.log
+```
+
+Or in Xcode: **Window → Devices and Simulators → your iPhone → Open Console**, filter `Runner` / `Flick`, launch the app, copy the crash lines.
+
+After pulling crash fixes, **re-run pods** (Podfile uses static frameworks + RevenueCat linker flags):
+
+```bash
+bash scripts/ios-reinstall-pods.sh
+```
+
 ### First-time signing
 
 ```bash

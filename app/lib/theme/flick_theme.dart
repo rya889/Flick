@@ -22,6 +22,15 @@ class FlickColors {
 }
 
 ThemeData buildFlickTheme(Brightness brightness) {
+  try {
+    return _buildFlickThemeWithGoogleFonts(brightness);
+  } catch (e, st) {
+    debugPrint('Google Fonts unavailable, using system theme: $e\n$st');
+    return _buildFlickThemeFallback(brightness);
+  }
+}
+
+ThemeData _buildFlickThemeWithGoogleFonts(Brightness brightness) {
   final dark = brightness == Brightness.dark;
   final bg = dark ? FlickColors.bgDark : FlickColors.bgLight;
   final surface = dark ? FlickColors.surfaceDark : FlickColors.surfaceLight;
@@ -100,6 +109,52 @@ ThemeData buildFlickTheme(Brightness brightness) {
     snackBarTheme: SnackBarThemeData(
       backgroundColor: surface,
       contentTextStyle: TextStyle(color: ink),
+    ),
+  );
+}
+
+ThemeData _buildFlickThemeFallback(Brightness brightness) {
+  final dark = brightness == Brightness.dark;
+  final bg = dark ? FlickColors.bgDark : FlickColors.bgLight;
+  final surface = dark ? FlickColors.surfaceDark : FlickColors.surfaceLight;
+  final ink = dark ? FlickColors.inkDark : FlickColors.inkLight;
+  final muted = dark ? FlickColors.inkMutedDark : FlickColors.inkMutedLight;
+  final signal = dark ? FlickColors.signalDark : FlickColors.signalLight;
+  final base = ThemeData(
+    useMaterial3: true,
+    brightness: brightness,
+    scaffoldBackgroundColor: bg,
+    fontFamily: 'Georgia',
+  );
+  return base.copyWith(
+    colorScheme: ColorScheme(
+      brightness: brightness,
+      primary: signal,
+      onPrimary: Colors.white,
+      secondary: signal,
+      onSecondary: Colors.white,
+      error: dark ? const Color(0xFFFF8A80) : const Color(0xFFB00020),
+      onError: Colors.white,
+      surface: surface,
+      onSurface: ink,
+    ),
+    textTheme: base.textTheme.apply(
+      bodyColor: ink,
+      displayColor: ink,
+    ).copyWith(
+      bodyLarge: base.textTheme.bodyLarge?.copyWith(height: 1.55, fontSize: 18),
+      bodyMedium: base.textTheme.bodyMedium?.copyWith(color: muted),
+    ),
+    appBarTheme: AppBarTheme(
+      backgroundColor: bg,
+      foregroundColor: ink,
+      elevation: 0,
+    ),
+    bottomNavigationBarTheme: BottomNavigationBarThemeData(
+      backgroundColor: surface,
+      selectedItemColor: signal,
+      unselectedItemColor: muted,
+      type: BottomNavigationBarType.fixed,
     ),
   );
 }

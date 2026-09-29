@@ -1,3 +1,6 @@
+import 'dart:async';
+
+import 'package:flutter/foundation.dart';
 import 'package:flutter/material.dart';
 import 'package:provider/provider.dart';
 
@@ -9,16 +12,33 @@ import 'theme/flick_theme.dart';
 
 Future<void> main() async {
   WidgetsFlutterBinding.ensureInitialized();
-  final store = CatalogStore();
-  final controller = FlickController(store);
-  // Paint immediately so web doesn't sit on a blank page while Drift/WASM loads.
-  runApp(FlickApp(controller: controller));
-  try {
-    await controller.bootstrap();
-  } catch (e, st) {
-    debugPrint('Flick bootstrap failed: $e\n$st');
-    controller.reportBootstrapError(e);
-  }
+
+  FlutterError.onError = (details) {
+    FlutterError.presentError(details);
+    debugPrint('FlutterError: ${details.exceptionAsString()}');
+    if (details.stack != null) {
+      debugPrint(details.stack.toString());
+    }
+  };
+
+  PlatformDispatcher.instance.onError = (error, stack) {
+    debugPrint('Uncaught async error: $error\n$stack');
+    return true;
+  };
+
+  await runZonedGuarded(() async {
+    final store = CatalogStore();
+    final controller = FlickController(store);
+    runApp(FlickApp(controller: controller));
+    try {
+      await controller.bootstrap();
+    } catch (e, st) {
+      debugPrint('Flick bootstrap failed: $e\n$st');
+      controller.reportBootstrapError(e);
+    }
+  }, (error, stack) {
+    debugPrint('Flick zone error: $error\n$stack');
+  });
 }
 
 class FlickApp extends StatelessWidget {
