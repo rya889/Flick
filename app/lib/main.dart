@@ -11,8 +11,14 @@ Future<void> main() async {
   WidgetsFlutterBinding.ensureInitialized();
   final store = CatalogStore();
   final controller = FlickController(store);
-  await controller.bootstrap();
+  // Paint immediately so web doesn't sit on a blank page while Drift/WASM loads.
   runApp(FlickApp(controller: controller));
+  try {
+    await controller.bootstrap();
+  } catch (e, st) {
+    debugPrint('Flick bootstrap failed: $e\n$st');
+    controller.reportBootstrapError(e);
+  }
 }
 
 class FlickApp extends StatelessWidget {
@@ -37,9 +43,44 @@ class FlickApp extends StatelessWidget {
             theme: buildFlickTheme(Brightness.light),
             darkTheme: buildFlickTheme(Brightness.dark),
             themeMode: mode,
-            home: const FlickShell(),
+            home: c.bootstrapError != null
+                ? _BootstrapError(message: c.bootstrapError!)
+                : const FlickShell(),
           );
         },
+      ),
+    );
+  }
+}
+
+class _BootstrapError extends StatelessWidget {
+  const _BootstrapError({required this.message});
+  final String message;
+
+  @override
+  Widget build(BuildContext context) {
+    return Scaffold(
+      body: SafeArea(
+        child: Padding(
+          padding: const EdgeInsets.all(24),
+          child: Column(
+            crossAxisAlignment: CrossAxisAlignment.stretch,
+            children: [
+              Text('Flick failed to start',
+                  style: Theme.of(context).textTheme.headlineSmall),
+              const SizedBox(height: 12),
+              Text(
+                message,
+                style: Theme.of(context).textTheme.bodyMedium,
+              ),
+              const SizedBox(height: 12),
+              const Text(
+                'On web, ensure sqlite3.wasm and drift_worker.js are in app/web/. '
+                'Prefer flutter run on iOS/Android for the full prototype.',
+              ),
+            ],
+          ),
+        ),
       ),
     );
   }

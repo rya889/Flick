@@ -1,5 +1,6 @@
 import 'package:drift/drift.dart';
 import 'package:drift_flutter/drift_flutter.dart';
+import 'package:flutter/foundation.dart' show kIsWeb;
 
 part 'flick_database.g.dart';
 
@@ -71,9 +72,21 @@ class MetaKv extends Table {
 
 @DriftDatabase(tables: [LibraryBooks, Chapters, Shorts, ProgressRows, MetaKv])
 class FlickDatabase extends _$FlickDatabase {
-  FlickDatabase([QueryExecutor? executor])
-      : super(executor ?? driftDatabase(name: 'flick'));
+  FlickDatabase([QueryExecutor? executor]) : super(executor ?? _openExecutor());
 
   @override
   int get schemaVersion => 1;
+}
+
+QueryExecutor _openExecutor() {
+  if (kIsWeb) {
+    return driftDatabase(
+      name: 'flick',
+      web: DriftWebOptions(
+        sqlite3Wasm: Uri.parse('sqlite3.wasm'),
+        driftWorker: Uri.parse('drift_worker.js'),
+      ),
+    );
+  }
+  return driftDatabase(name: 'flick');
 }

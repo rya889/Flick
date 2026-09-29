@@ -31,6 +31,7 @@ class FlickController extends ChangeNotifier {
   final _rng = Random();
 
   bool ready = false;
+  String? bootstrapError;
   int tabIndex = 0;
   PlayMode playMode = PlayMode.story;
   ContentMode contentMode = ContentMode.full;
@@ -107,6 +108,12 @@ class FlickController extends ChangeNotifier {
   }
 
   bool get listenCapped => !plusActive && listenSecondsToday >= freeListenCapSeconds;
+
+  void reportBootstrapError(Object error) {
+    bootstrapError = error.toString();
+    ready = false;
+    notifyListeners();
+  }
 
   Future<void> bootstrap() async {
     await _store.init();

@@ -43,3 +43,7 @@ app.*.map.json
 /android/app/debug
 /android/app/profile
 /android/app/release
+
+# Drift web compile artifacts
+web/drift_worker.js.deps
+web/drift_worker.js.map
