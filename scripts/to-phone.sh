@@ -54,11 +54,36 @@ if [[ -x "$ROOT/scripts/strip-swiftuicore-linker.sh" ]]; then
   bash "$ROOT/scripts/strip-swiftuicore-linker.sh" || true
 fi
 
+# Certificate names look like: Apple Development: Phuc Le (AB12CD34EF)
+# The 10-character team id is the last parentheses, not the Xcode label "Personal Team".
+list_signing_teams() {
+  security find-identity -v -p codesigning 2>/dev/null \
+    | sed -n 's/.*"\(.*\)".*/\1/p' \
+    | sed -n 's/.*(\([A-Za-z0-9]\{10\}\))$/\1/p' \
+    | sort -u
+}
+
 if [[ -z "$TEAM" ]]; then
-  if [[ -t 0 ]]; then
+  TEAM_LIST="$(list_signing_teams || true)"
+  TEAM_COUNT=0
+  if [[ -n "$TEAM_LIST" ]]; then
+    TEAM_COUNT="$(printf '%s\n' "$TEAM_LIST" | grep -c . || true)"
+  fi
+  if [[ "$TEAM_COUNT" -eq 1 ]]; then
+    TEAM="$(printf '%s\n' "$TEAM_LIST" | head -1)"
+    echo "==> Using Apple Team $TEAM from your Mac signing certificate"
+  elif [[ "$TEAM_COUNT" -gt 1 ]]; then
+    echo "==> More than one signing team on this Mac:"
+    security find-identity -v -p codesigning 2>/dev/null | sed 's/^/    /' || true
+    if [[ -t 0 ]]; then
+      read -rp "Paste the 10-character id in parentheses after your name: " TEAM
+      TEAM="$(echo "$TEAM" | tr -d '[:space:]')"
+    fi
+  elif [[ -t 0 ]]; then
     echo ""
-    echo "One-time setup: Apple Team ID (10 characters)."
-    echo "Xcode → Runner target → Signing & Capabilities → Team (the id in parentheses)."
+    echo "Could not find an Apple Development certificate yet."
+    echo "In Xcode: Settings → Accounts → your Apple ID → Manage Certificates → + Apple Development."
+    echo "Then paste only the 10-character Team ID (not the name \"Phuc Le (Personal Team)\")."
     read -rp "DEVELOPMENT_TEAM: " TEAM
     TEAM="$(echo "$TEAM" | tr -d '[:space:]')"
   fi
