@@ -174,15 +174,6 @@ class _NowPlayerState extends State<NowPlayer> {
                               ),
                             ),
                           ),
-                          if (!c.playing && active)
-                            Padding(
-                              padding: const EdgeInsets.only(bottom: 8),
-                              child: Text(
-                                'Paused — tap center · swipe · double-tap heart',
-                                style:
-                                    Theme.of(context).textTheme.bodyMedium,
-                              ),
-                            ),
                         ],
                       ),
                     ),
@@ -190,6 +181,10 @@ class _NowPlayerState extends State<NowPlayer> {
                 },
               ),
               const HeartBurstOverlay(),
+              if (!c.playing)
+                const IgnorePointer(
+                  child: _PausePlayOverlay(),
+                ),
             ],
           ),
         ),
@@ -201,6 +196,31 @@ class _NowPlayerState extends State<NowPlayer> {
 
 List<String> wordsOf(String text) =>
     text.split(RegExp(r'\s+')).where((w) => w.isNotEmpty).toList();
+
+class _PausePlayOverlay extends StatelessWidget {
+  const _PausePlayOverlay();
+
+  @override
+  Widget build(BuildContext context) {
+    final scheme = Theme.of(context).colorScheme;
+    return Center(
+      child: DecoratedBox(
+        decoration: BoxDecoration(
+          color: scheme.scrim.withValues(alpha: 0.45),
+          shape: BoxShape.circle,
+        ),
+        child: Padding(
+          padding: const EdgeInsets.all(18),
+          child: Icon(
+            Icons.play_arrow_rounded,
+            size: 56,
+            color: scheme.onPrimary,
+          ),
+        ),
+      ),
+    );
+  }
+}
 
 String _formatSpeed(double speed) {
   if (speed == speed.roundToDouble()) return speed.toStringAsFixed(0);

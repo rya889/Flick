@@ -67,6 +67,8 @@ class FlickController extends ChangeNotifier {
   final Set<String> _aiInflight = {};
   final Set<String> _aiDone = {};
   bool _ttsConfigured = false;
+  bool _ttsHandlersInstalled = false;
+  int _ttsSpeakBaseWordIndex = 0;
 
   PlusService get plusService => _plus;
 
@@ -210,6 +212,7 @@ class FlickController extends ChangeNotifier {
       await _tts.setVolume(1.0);
       await _tts.setPitch(1.0);
       await _tts.awaitSpeakCompletion(true);
+      _installTtsHandlers();
       _ttsConfigured = true;
     } catch (e, st) {
       debugPrint('Flick TTS configure failed: $e\n$st');
@@ -371,9 +374,6 @@ class FlickController extends ChangeNotifier {
     queueIndex = index.clamp(0, queue.length - 1);
     _persistProgress();
     _resetKaraoke();
-    if (listening && !muted) {
-      unawaited(_speakCurrent());
-    }
     notifyListeners();
     unawaited(ensureAiTldrForCurrent());
   }
@@ -392,9 +392,6 @@ class FlickController extends ChangeNotifier {
     }
     _persistProgress();
     _resetKaraoke();
-    if (listening && !muted) {
-      unawaited(_speakCurrent());
-    }
     notifyListeners();
     unawaited(ensureAiTldrForCurrent());
   }
@@ -404,9 +401,6 @@ class FlickController extends ChangeNotifier {
     queueIndex -= 1;
     _persistProgress();
     _resetKaraoke();
-    if (listening && !muted) {
-      unawaited(_speakCurrent());
-    }
     notifyListeners();
     unawaited(ensureAiTldrForCurrent());
   }
@@ -429,9 +423,9 @@ class FlickController extends ChangeNotifier {
   void togglePlay() {
     playing = !playing;
     if (playing) {
-      _startKaraoke();
+      _resumePlayback();
     } else {
-      _karaokeTimer?.cancel();
+      _pausePlayback();
     }
     notifyListeners();
   }
@@ -534,8 +528,18 @@ class FlickController extends ChangeNotifier {
     playbackSpeed = value.clamp(0.5, 3.0);
     await _store.setPlaybackSpeed(playbackSpeed);
     await _configureTts();
-    // Restart karaoke so the new rate applies immediately (not next short).
-    _resetKaraoke();
+    // Restart playback so the new rate applies immediately (not next short).
+    final from = karaokeWord >= 0 ? karaokeWord : 0;
+    _karaokeTimer?.cancel();
+    if (playing) {
+      if (_playbackUsesTts) {
+        unawaited(_speakFromWord(from));
+      } else {
+        _startKaraokeTimer(fromIndex: from > 0 ? from - 1 : -1);
+      }
+    } else {
+      karaokeWord = -1;
+    }
     notifyListeners();
   }
 
@@ -585,22 +589,73 @@ class FlickController extends ChangeNotifier {
       }
       muted = false;
       listening = true;
-      await _speakCurrent();
+      _karaokeTimer?.cancel();
+      if (playing) {
+        await _speakFromWord(karaokeWord >= 0 ? karaokeWord : 0);
+      }
       _startListenMeter();
     } else {
       muted = true;
       listening = false;
       await _tts.stop();
       _stopListenMeter();
+      if (playing) {
+        _startKaraokeTimer(fromIndex: karaokeWord >= 0 ? karaokeWord : -1);
+      }
     }
     notifyListeners();
     return true;
   }
 
+  bool get _playbackUsesTts => listening && !muted;
+
+  int _wordIndexAtOffset(String text, int start) {
+    if (text.isEmpty) return 0;
+    final clamped = start.clamp(0, text.length);
+    final before = text.substring(0, clamped);
+    final count =
+        before.split(RegExp(r'\s+')).where((w) => w.isNotEmpty).length;
+    return max(0, count - 1);
+  }
+
+  String _textFromWordIndex(int fromIndex) {
+    final words = displayWords;
+    if (words.isEmpty) return '';
+    if (fromIndex <= 0) return displayText;
+    if (fromIndex >= words.length) return '';
+    return words.sublist(fromIndex).join(' ');
+  }
+
+  void _pausePlayback() {
+    _karaokeTimer?.cancel();
+    if (_playbackUsesTts) {
+      unawaited(_tts.stop());
+    }
+  }
+
+  void _resumePlayback() {
+    if (_playbackUsesTts) {
+      _karaokeTimer?.cancel();
+      final from = karaokeWord >= 0 ? karaokeWord : 0;
+      unawaited(_speakFromWord(from));
+    } else {
+      _startKaraokeTimer(
+        fromIndex: karaokeWord >= 0 ? karaokeWord - 1 : -1,
+      );
+    }
+  }
+
   Future<void> _speakCurrent() async {
+    await _speakFromWord(0);
+  }
+
+  Future<void> _speakFromWord(int fromWordIndex) async {
     if (muted || listenCapped) return;
+    final text = _textFromWordIndex(fromWordIndex);
+    if (text.isEmpty) return;
     try {
       await _configureTts();
+      _ttsSpeakBaseWordIndex = fromWordIndex.clamp(0, max(0, displayWords.length - 1));
       await _tts.stop();
       if (!kIsWeb && defaultTargetPlatform == TargetPlatform.iOS) {
         await _tts.setIosAudioCategory(
@@ -616,11 +671,48 @@ class FlickController extends ChangeNotifier {
       } else {
         await _tts.setSpeechRate(0.45 * playbackSpeed);
       }
-      final result = await _tts.speak(displayText);
+      if (fromWordIndex <= 0) {
+        karaokeWord = -1;
+      }
+      final result = await _tts.speak(text);
       debugPrint('Flick TTS speak result: $result');
     } catch (e, st) {
       debugPrint('Flick TTS speak failed: $e\n$st');
     }
+  }
+
+  void _installTtsHandlers() {
+    if (_ttsHandlersInstalled) return;
+    _ttsHandlersInstalled = true;
+
+    _tts.setStartHandler(() {
+      if (!_playbackUsesTts || !playing) return;
+      if (karaokeWord < 0) {
+        karaokeWord = _ttsSpeakBaseWordIndex;
+        notifyListeners();
+      }
+    });
+
+    _tts.setProgressHandler((text, start, end, word) {
+      if (!_playbackUsesTts || !playing) return;
+      final local = _wordIndexAtOffset(text, start);
+      final next = _ttsSpeakBaseWordIndex + local;
+      if (next != karaokeWord) {
+        karaokeWord = next;
+        notifyListeners();
+      }
+    });
+
+    _tts.setCompletionHandler(() {
+      if (!playing) return;
+      if (!_playbackUsesTts) return;
+      _karaokeTimer?.cancel();
+      karaokeWord = max(0, displayWords.length - 1);
+      notifyListeners();
+      Future<void>.delayed(const Duration(milliseconds: 450), () {
+        if (playing && _playbackUsesTts) nextShort();
+      });
+    });
   }
 
   void _startListenMeter() {
@@ -696,24 +788,34 @@ class FlickController extends ChangeNotifier {
   void _resetKaraoke() {
     karaokeWord = -1;
     _karaokeTimer?.cancel();
+    unawaited(_tts.stop());
     if (playing) _startKaraoke();
   }
 
   void _startKaraoke() {
     _karaokeTimer?.cancel();
-    karaokeWord = -1;
+    if (_playbackUsesTts) {
+      unawaited(_speakCurrent());
+      return;
+    }
+    _startKaraokeTimer(fromIndex: -1);
+  }
+
+  void _startKaraokeTimer({required int fromIndex}) {
+    _karaokeTimer?.cancel();
+    karaokeWord = fromIndex;
     final words = displayWords;
     if (words.isEmpty) return;
     // ~420ms/word at 1x; allow up to 3x (~140ms) without clamping away the gain.
     final msPerWord = (420 / playbackSpeed).round().clamp(100, 900);
     _karaokeTimer = Timer.periodic(Duration(milliseconds: msPerWord), (timer) {
-      if (!playing) return;
+      if (!playing || _playbackUsesTts) return;
       karaokeWord += 1;
       notifyListeners();
       if (karaokeWord >= words.length - 1) {
         timer.cancel();
         Future<void>.delayed(const Duration(milliseconds: 450), () {
-          if (playing) nextShort();
+          if (playing && !_playbackUsesTts) nextShort();
         });
       }
     });
