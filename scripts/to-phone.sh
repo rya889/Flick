@@ -18,18 +18,33 @@ SIGNING="$ROOT/app/ios/Flutter/Signing.local.xcconfig"
 DEFAULT_DEVICE="00008150-000C10D62687801C"
 DEFAULT_BRANCH="cursor/fix-ios-deploy-target-983e"
 
-TEAM="${FLICK_IOS_TEAM:-}"
-DEVICE="${FLICK_IOS_DEVICE:-}"
-BRANCH="${FLICK_BRANCH:-}"
+TEAM_FROM_ENV="${FLICK_IOS_TEAM:-}"
+DEVICE_FROM_ENV="${FLICK_IOS_DEVICE:-}"
+BRANCH_FROM_ENV="${FLICK_BRANCH:-}"
+TEAM=""
+DEVICE=""
+BRANCH=""
 
 if [[ -f "$CONFIG" ]]; then
   # shellcheck disable=SC1090
   set -a
   source "$CONFIG"
   set +a
-  TEAM="${FLICK_IOS_TEAM:-$TEAM}"
-  DEVICE="${FLICK_IOS_DEVICE:-$DEVICE}"
-  BRANCH="${FLICK_BRANCH:-$BRANCH}"
+  TEAM="${FLICK_IOS_TEAM:-}"
+  DEVICE="${FLICK_IOS_DEVICE:-}"
+  BRANCH="${FLICK_BRANCH:-}"
+fi
+
+# A value passed on the command line replaces the saved one.
+# Example: FLICK_IOS_TEAM=AB12CD34EF bash scripts/to-phone.sh
+if [[ -n "$TEAM_FROM_ENV" ]]; then
+  TEAM="$TEAM_FROM_ENV"
+fi
+if [[ -n "$DEVICE_FROM_ENV" ]]; then
+  DEVICE="$DEVICE_FROM_ENV"
+fi
+if [[ -n "$BRANCH_FROM_ENV" ]]; then
+  BRANCH="$BRANCH_FROM_ENV"
 fi
 
 if [[ -z "$TEAM" && -f "$SIGNING" ]]; then
@@ -54,39 +69,15 @@ if [[ -x "$ROOT/scripts/strip-swiftuicore-linker.sh" ]]; then
   bash "$ROOT/scripts/strip-swiftuicore-linker.sh" || true
 fi
 
-# Certificate names look like: Apple Development: Phuc Le (AB12CD34EF)
-# The 10-character team id is the last parentheses, not the Xcode label "Personal Team".
-list_signing_teams() {
-  security find-identity -v -p codesigning 2>/dev/null \
-    | sed -n 's/.*"\(.*\)".*/\1/p' \
-    | sed -n 's/.*(\([A-Za-z0-9]\{10\}\))$/\1/p' \
-    | sort -u
-}
-
-if [[ -z "$TEAM" ]]; then
-  TEAM_LIST="$(list_signing_teams || true)"
-  TEAM_COUNT=0
-  if [[ -n "$TEAM_LIST" ]]; then
-    TEAM_COUNT="$(printf '%s\n' "$TEAM_LIST" | grep -c . || true)"
-  fi
-  if [[ "$TEAM_COUNT" -eq 1 ]]; then
-    TEAM="$(printf '%s\n' "$TEAM_LIST" | head -1)"
-    echo "==> Using Apple Team $TEAM from your Mac signing certificate"
-  elif [[ "$TEAM_COUNT" -gt 1 ]]; then
-    echo "==> More than one signing team on this Mac:"
-    security find-identity -v -p codesigning 2>/dev/null | sed 's/^/    /' || true
-    if [[ -t 0 ]]; then
-      read -rp "Paste the 10-character id in parentheses after your name: " TEAM
-      TEAM="$(echo "$TEAM" | tr -d '[:space:]')"
-    fi
-  elif [[ -t 0 ]]; then
-    echo ""
-    echo "Could not find an Apple Development certificate yet."
-    echo "In Xcode: Settings → Accounts → your Apple ID → Manage Certificates → + Apple Development."
-    echo "Then paste only the 10-character Team ID (not the name \"Phuc Le (Personal Team)\")."
-    read -rp "DEVELOPMENT_TEAM: " TEAM
-    TEAM="$(echo "$TEAM" | tr -d '[:space:]')"
-  fi
+# Do not guess the team from Keychain certificates. That id can belong to a
+# different Apple ID than the one signed into Xcode ("Unknown Name" in the Team menu).
+if [[ -z "$TEAM" && -t 0 ]]; then
+  echo ""
+  echo "One-time: copy the Team ID for the account Xcode can actually use."
+  echo "Xcode → Settings → Accounts → select your Apple ID → Phuc Le (Personal Team)."
+  echo "Copy the 10-character Team ID shown for that row (not the words Personal Team)."
+  read -rp "DEVELOPMENT_TEAM: " TEAM
+  TEAM="$(echo "$TEAM" | tr -d '[:space:]')"
 fi
 
 if [[ ! "$TEAM" =~ ^[A-Za-z0-9]{10}$ ]]; then
