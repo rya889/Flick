@@ -69,11 +69,13 @@ flutter run -d rPhone17 --release -v 2>&1 | tee /tmp/flick-ios.log
 
 Or in Xcode: **Window → Devices and Simulators → your iPhone → Open Console**, filter `Runner` / `Flick`, launch the app, copy the crash lines.
 
-After pulling crash fixes, **re-run pods** (Podfile uses static frameworks + RevenueCat linker flags):
+After pulling crash fixes, **re-run pods** (Podfile pins RevenueCat + static frameworks):
 
 ```bash
 bash scripts/ios-reinstall-pods.sh
 ```
+
+If Xcode reports **SwiftUICore** linker errors, your `Runner` target picked up a bad flag — open **Build Settings → Other Linker Flags** and remove `-weak_framework SwiftUICore`, then `pod install` again from a clean Podfile.
 
 ### First-time signing
 
