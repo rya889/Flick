@@ -32,7 +32,8 @@ class FlickController extends ChangeNotifier {
 
   bool ready = false;
   String? bootstrapError;
-  int tabIndex = 0;
+  /// Library-first: do not dump users into an autoplaying Now feed.
+  int tabIndex = 1;
   PlayMode playMode = PlayMode.story;
   ContentMode contentMode = ContentMode.full;
   TldrSubmode tldrSubmode = TldrSubmode.condense;
@@ -48,7 +49,7 @@ class FlickController extends ChangeNotifier {
   List<FeedItem> queue = [];
   int queueIndex = 0;
 
-  bool playing = true;
+  bool playing = false;
   bool muted = true;
   bool listening = false;
   bool showHeartBurst = false;
@@ -148,13 +149,17 @@ class FlickController extends ChangeNotifier {
     if (books.isEmpty) {
       await seedSamples();
     } else {
-      await resumeLast();
+      await _store.refreshExtractiveTldrIfNeeded(books, shortsByBook);
+      // Reload shorts after extractive refresh.
+      for (final book in books) {
+        shortsByBook[book.id] = await _store.loadShorts(book.id);
+      }
     }
 
+    tabIndex = 1;
+    playing = false;
     ready = true;
     notifyListeners();
-    _startKaraoke();
-    unawaited(ensureAiTldrForCurrent());
   }
 
   Future<void> _refreshTldrHealth() async {
@@ -164,12 +169,30 @@ class FlickController extends ChangeNotifier {
 
   Future<void> _configureTts() async {
     try {
-      await _tts.setSpeechRate(0.45 * playbackSpeed);
+      // iPhone silent switch mutes ambient; playback category is required for Listen.
+      if (!kIsWeb && defaultTargetPlatform == TargetPlatform.iOS) {
+        await _tts.setSharedInstance(true);
+        await _tts.setIosAudioCategory(
+          IosTextToSpeechAudioCategory.playback,
+          [
+            IosTextToSpeechAudioCategoryOptions.allowBluetooth,
+            IosTextToSpeechAudioCategoryOptions.allowBluetoothA2DP,
+            IosTextToSpeechAudioCategoryOptions.defaultToSpeaker,
+          ],
+          IosTextToSpeechAudioMode.spokenAudio,
+        );
+      }
+      await _tts.setLanguage('en-US');
+      // iOS speech rate is ~0.0–1.0 (0.5 ≈ normal). Scale mildly with playbackSpeed.
+      final rate = (!kIsWeb && defaultTargetPlatform == TargetPlatform.iOS)
+          ? (0.45 * playbackSpeed).clamp(0.3, 0.7)
+          : 0.45 * playbackSpeed;
+      await _tts.setSpeechRate(rate);
       await _tts.setVolume(1.0);
       await _tts.setPitch(1.0);
       await _tts.awaitSpeakCompletion(true);
-    } catch (_) {
-      // Web / unsupported platforms may fail; Listen stays optional.
+    } catch (e, st) {
+      debugPrint('Flick TTS configure failed: $e\n$st');
     }
   }
 
@@ -183,9 +206,7 @@ class FlickController extends ChangeNotifier {
     for (final book in imported) {
       shortsByBook[book.id] = await _store.loadShorts(book.id);
     }
-    if (imported.isNotEmpty) {
-      await openBook(imported.first);
-    }
+    // Stay on Library — do not auto-open / autoplay a sample.
   }
 
   Future<void> resumeLast() async {
@@ -206,8 +227,11 @@ class FlickController extends ChangeNotifier {
     queue = shorts.map((s) => FeedItem(book: book, short: s)).toList();
     queueIndex = resume.clamp(0, max(0, queue.length - 1));
     await _store.setLastBookId(book.id);
+    tabIndex = 0;
+    playing = true;
     _resetKaraoke();
     notifyListeners();
+    unawaited(ensureAiTldrForCurrent());
   }
 
   Future<void> addSample(SampleMeta sample) async {
@@ -557,9 +581,25 @@ class FlickController extends ChangeNotifier {
     if (muted || listenCapped) return;
     try {
       await _tts.stop();
-      await _tts.setSpeechRate(0.45 * playbackSpeed);
-      await _tts.speak(displayText);
-    } catch (_) {}
+      if (!kIsWeb && defaultTargetPlatform == TargetPlatform.iOS) {
+        await _tts.setIosAudioCategory(
+          IosTextToSpeechAudioCategory.playback,
+          [
+            IosTextToSpeechAudioCategoryOptions.allowBluetooth,
+            IosTextToSpeechAudioCategoryOptions.allowBluetoothA2DP,
+            IosTextToSpeechAudioCategoryOptions.defaultToSpeaker,
+          ],
+          IosTextToSpeechAudioMode.spokenAudio,
+        );
+        await _tts.setSpeechRate((0.45 * playbackSpeed).clamp(0.3, 0.7));
+      } else {
+        await _tts.setSpeechRate(0.45 * playbackSpeed);
+      }
+      final result = await _tts.speak(displayText);
+      debugPrint('Flick TTS speak result: $result');
+    } catch (e, st) {
+      debugPrint('Flick TTS speak failed: $e\n$st');
+    }
   }
 
   void _startListenMeter() {

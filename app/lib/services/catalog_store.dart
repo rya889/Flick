@@ -7,6 +7,7 @@ import 'package:shared_preferences/shared_preferences.dart';
 
 import '../data/flick_database.dart';
 import '../models/models.dart';
+import 'abbreviate.dart';
 import 'book_blob_store.dart';
 import 'epub_parser.dart';
 import 'short_builder.dart';
@@ -28,6 +29,35 @@ class CatalogStore {
   }
 
   Future<void> close() => _db.close();
+
+  /// Rebuild extractive Condense/Summary/Quotes without wiping AI caches.
+  Future<void> refreshExtractiveTldrIfNeeded(
+    List<LibraryBook> books,
+    Map<String, List<ShortSegment>> shortsByBook,
+  ) async {
+    final done = await _getMeta('extractiveTldr.v2');
+    if (done == 'true') return;
+
+    for (final book in books) {
+      final shorts = shortsByBook[book.id] ?? await loadShorts(book.id);
+      if (shorts.isEmpty) continue;
+      final rebuilt = [
+        for (final s in shorts)
+          if (s.tldrSource == 'ai')
+            s
+          else
+            s.copyWith(
+              condense: abbreviate(s.original),
+              summary: summarizePassage(s.original),
+              quotes: keyQuotes(s.original),
+              tldrSource: 'extractive',
+            ),
+      ];
+      await saveShorts(book.id, rebuilt);
+      shortsByBook[book.id] = rebuilt;
+    }
+    await _setMeta('extractiveTldr.v2', 'true');
+  }
 
   Future<List<LibraryBook>> loadBooks() async {
     final rows = await (_db.select(_db.libraryBooks)

@@ -285,18 +285,29 @@ class _ChromeBar extends StatelessWidget {
           if (c.contentMode == ContentMode.tldr) ...[
             const SizedBox(height: 8),
             SegmentedButton<TldrSubmode>(
+              showSelectedIcon: false,
+              style: ButtonStyle(
+                visualDensity: VisualDensity.compact,
+                tapTargetSize: MaterialTapTargetSize.shrinkWrap,
+                textStyle: WidgetStatePropertyAll(
+                  Theme.of(context).textTheme.labelLarge?.copyWith(fontSize: 12),
+                ),
+              ),
               segments: const [
                 ButtonSegment(
                   value: TldrSubmode.condense,
-                  label: Text('Condense'),
+                  label: Text('Brief'),
+                  tooltip: 'Condense — same beat, fewer words',
                 ),
                 ButtonSegment(
                   value: TldrSubmode.summary,
                   label: Text('Summary'),
+                  tooltip: 'Summary — gist of the passage',
                 ),
                 ButtonSegment(
                   value: TldrSubmode.quotes,
                   label: Text('Quotes'),
+                  tooltip: 'Key quotes',
                 ),
               ],
               selected: {c.tldrSubmode},
