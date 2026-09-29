@@ -2567,16 +2567,7 @@ class $$LibraryBooksTableTableManager
                 rowid: rowid,
               ),
           withReferenceMapper: (p0) => p0
-              .map(
-                (e) => (
-                  e.readTable<$LibraryBooksTable, LibraryBookRow>(table),
-                  BaseReferences<
-                    _$FlickDatabase,
-                    $LibraryBooksTable,
-                    LibraryBookRow
-                  >(db, table, e),
-                ),
-              )
+              .map((e) => (e.readTable(table), BaseReferences(db, table, e)))
               .toList(),
           prefetchHooksCallback: null,
         ),
@@ -2793,16 +2784,7 @@ class $$ChaptersTableTableManager
                 endOffset: endOffset,
               ),
           withReferenceMapper: (p0) => p0
-              .map(
-                (e) => (
-                  e.readTable<$ChaptersTable, ChapterRow>(table),
-                  BaseReferences<_$FlickDatabase, $ChaptersTable, ChapterRow>(
-                    db,
-                    table,
-                    e,
-                  ),
-                ),
-              )
+              .map((e) => (e.readTable(table), BaseReferences(db, table, e)))
               .toList(),
           prefetchHooksCallback: null,
         ),
@@ -3139,16 +3121,7 @@ class $$ShortsTableTableManager
                 rowid: rowid,
               ),
           withReferenceMapper: (p0) => p0
-              .map(
-                (e) => (
-                  e.readTable<$ShortsTable, ShortRow>(table),
-                  BaseReferences<_$FlickDatabase, $ShortsTable, ShortRow>(
-                    db,
-                    table,
-                    e,
-                  ),
-                ),
-              )
+              .map((e) => (e.readTable(table), BaseReferences(db, table, e)))
               .toList(),
           prefetchHooksCallback: null,
         ),
@@ -3328,16 +3301,7 @@ class $$ProgressRowsTableTableManager
                 rowid: rowid,
               ),
           withReferenceMapper: (p0) => p0
-              .map(
-                (e) => (
-                  e.readTable<$ProgressRowsTable, ProgressRow>(table),
-                  BaseReferences<
-                    _$FlickDatabase,
-                    $ProgressRowsTable,
-                    ProgressRow
-                  >(db, table, e),
-                ),
-              )
+              .map((e) => (e.readTable(table), BaseReferences(db, table, e)))
               .toList(),
           prefetchHooksCallback: null,
         ),
@@ -3477,16 +3441,7 @@ class $$MetaKvTableTableManager
                 rowid: rowid,
               ),
           withReferenceMapper: (p0) => p0
-              .map(
-                (e) => (
-                  e.readTable<$MetaKvTable, MetaKvRow>(table),
-                  BaseReferences<_$FlickDatabase, $MetaKvTable, MetaKvRow>(
-                    db,
-                    table,
-                    e,
-                  ),
-                ),
-              )
+              .map((e) => (e.readTable(table), BaseReferences(db, table, e)))
               .toList(),
           prefetchHooksCallback: null,
         ),
