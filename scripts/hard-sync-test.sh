@@ -29,5 +29,5 @@ if [[ ! -f "$ROOT/app/ios/Flutter/Signing.local.xcconfig" ]]; then
   echo "Tip: To avoid re-signing in Xcode after every sync, run once:"
   echo "  FLICK_IOS_TEAM=YOUR10CHARID bash scripts/ios-configure-signing.sh"
 fi
-echo "Run:  cd app && flutter run -d rPhone17 --release"
-echo "      (or set FLICK_DEVICE=your_device_name)"
+echo "Install on the phone with:  bash scripts/to-phone.sh"
+echo "(hard-sync-test.sh only refreshes the tree; to-phone.sh is the full deploy.)"

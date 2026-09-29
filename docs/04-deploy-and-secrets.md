@@ -4,29 +4,29 @@
 
 Requires Mac + Xcode. This repo targets **iOS 15+** and bundle id **`com.rya889.flick`**.
 
-### Pull latest build onto your phone (includes fixing local git blockers)
+### The only command (every time there is a new build)
 
-**Every test run — discard all local changes and match the branch:**
-
-```bash
-cd ~/dev/Flick && bash scripts/hard-sync-test.sh && cd app && flutter run -d rPhone17 --release
-```
-
-One-liner without the script (same effect):
+From the repo on your Mac, paste this and leave the phone unlocked:
 
 ```bash
-cd ~/dev/Flick && git fetch origin cursor/fix-ios-deploy-target-983e && git checkout cursor/fix-ios-deploy-target-983e && git reset --hard origin/cursor/fix-ios-deploy-target-983e && git clean -fd && cd app && flutter pub get && rm -rf ios/Pods ios/Podfile.lock ios/.symlinks build/ios && (cd ios && pod install --repo-update) && flutter clean && flutter run -d rPhone17 --release
+cd ~/dev/Flick && bash scripts/to-phone.sh
 ```
 
-Feature work lives on branch **`cursor/fix-ios-deploy-target-983e`** until merged to `main`.  
-A **release** install is required to see UI changes on the home-screen icon; debug builds need `flutter run` attached.
+That script:
 
-**One script (recommended):**
+1. Downloads the latest **`cursor/fix-ios-deploy-target-983e`** and discards local code edits that block updates.
+2. Reuses your Apple Team ID from **`.flick/phone.env`** (created on first run, never committed) so you do not re-sign in Xcode.
+3. Installs a **release** build on iPhone **`00008150-000C10D62687801C`** (rPhone17).
+
+**First run only:** it asks for your 10-character Team ID (Xcode → Runner → Signing & Capabilities, the id in parentheses), saves it, then installs. After that, the same command is enough.
+
+If an install gets stuck (rare):
 
 ```bash
-cd ~/dev/Flick
-FLICK_IOS_DEVICE=rPhone17 bash scripts/iphone-pull-and-run.sh
+cd ~/dev/Flick && FLICK_CLEAN=1 bash scripts/to-phone.sh
 ```
+
+Feature work stays on **`cursor/fix-ios-deploy-target-983e`** until it is merged to `main`. A release install is what updates the home-screen app.
 
 **Same steps manually** — run from repo root. These lines **discard local edits** that usually block `git pull` (Xcode, `pub get`, etc.):
 
