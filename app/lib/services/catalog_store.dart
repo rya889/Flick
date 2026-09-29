@@ -7,6 +7,8 @@ import 'package:shared_preferences/shared_preferences.dart';
 
 import '../data/flick_database.dart';
 import '../models/models.dart';
+import '../models/reader_sync.dart';
+import 'book_pages.dart';
 import 'abbreviate.dart';
 import 'book_blob_store.dart';
 import 'epub_parser.dart';
@@ -176,6 +178,91 @@ class CatalogStore {
 
   Future<void> setPlaybackSpeed(double value) =>
       _setMeta('speed', value.toString());
+
+  Future<List<StoredChapterSpan>> loadChapterSpans(String bookId) async {
+    final rows = await (_db.select(_db.chapters)
+          ..where((t) => t.bookId.equals(bookId))
+          ..orderBy([(t) => OrderingTerm.asc(t.chapterIndex)]))
+        .get();
+    return [
+      for (final row in rows)
+        StoredChapterSpan(
+          index: row.chapterIndex,
+          title: row.title,
+          startOffset: row.startOffset,
+          endOffset: row.endOffset,
+        ),
+    ];
+  }
+
+  Future<Map<String, ReaderLocation>> loadReaderLocations() async {
+    final raw = await _getMeta('reader.locations');
+    if (raw == null || raw.isEmpty) return {};
+    final decoded = jsonDecode(raw) as Map<String, dynamic>;
+    return {
+      for (final entry in decoded.entries)
+        entry.key: ReaderLocation.fromJson(entry.value as Map<String, dynamic>),
+    };
+  }
+
+  Future<void> saveReaderLocations(Map<String, ReaderLocation> locations) async {
+    await _setMeta(
+      'reader.locations',
+      jsonEncode({
+        for (final entry in locations.entries) entry.key: entry.value.toJson(),
+      }),
+    );
+  }
+
+  Future<SyncTarget> get syncTarget async {
+    final name = await _getMeta('sync.target');
+    if (name == null) return SyncTarget.device;
+    return SyncTarget.values.byName(name);
+  }
+
+  Future<void> setSyncTarget(SyncTarget value) =>
+      _setMeta('sync.target', value.name);
+
+  Future<DateTime?> get lastLibraryBackup async {
+    final raw = await _getMeta('sync.lastBackupAt');
+    if (raw == null || raw.isEmpty) return null;
+    return DateTime.tryParse(raw);
+  }
+
+  Future<void> setLastLibraryBackup(DateTime value) =>
+      _setMeta('sync.lastBackupAt', value.toIso8601String());
+
+  Future<double> get readerFontSize async {
+    final raw = await _getMeta('reader.fontSize');
+    return double.tryParse(raw ?? '') ?? 18;
+  }
+
+  Future<void> setReaderFontSize(double value) =>
+      _setMeta('reader.fontSize', value.toString());
+
+  Future<ReaderPaper> get readerPaper async {
+    final name = await _getMeta('reader.paper');
+    if (name == null) return ReaderPaper.paper;
+    return ReaderPaper.values.byName(name);
+  }
+
+  Future<void> setReaderPaper(ReaderPaper value) =>
+      _setMeta('reader.paper', value.name);
+
+  Future<void> importBookBundle(
+    LibraryBook book,
+    List<ShortSegment> shorts,
+  ) async {
+    final withCount = book.copyWith(shortCount: shorts.length);
+    await _db.transaction(() async {
+      await _upsertBook(withCount);
+      await (_db.delete(_db.shorts)..where((t) => t.bookId.equals(book.id)))
+          .go();
+      for (final s in shorts) {
+        await _db.into(_db.shorts).insertOnConflictUpdate(_shortCompanion(s));
+      }
+    });
+  }
 
   Future<LibraryBook> importSample(SampleMeta sample) async {
     final text = await rootBundle.loadString(sample.assetPath);

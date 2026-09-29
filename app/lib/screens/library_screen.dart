@@ -6,6 +6,8 @@ import 'package:provider/provider.dart';
 
 import '../models/models.dart';
 import '../state/flick_controller.dart';
+import 'ebook_reader.dart';
+import 'sync_sheet.dart';
 
 class LibraryScreen extends StatefulWidget {
   const LibraryScreen({super.key});
@@ -59,6 +61,11 @@ class _LibraryScreenState extends State<LibraryScreen> {
                 onPressed: () => _showBookmarks(context),
                 icon: const Icon(Icons.bookmark_outline),
                 label: Text('Saves (${c.saves.length})'),
+              ),
+              OutlinedButton.icon(
+                onPressed: () => showSyncSheet(context),
+                icon: const Icon(Icons.sync),
+                label: const Text('Sync'),
               ),
             ],
           ),
@@ -357,7 +364,20 @@ class _SampleTile extends StatelessWidget {
       leading: _Cover(hue: sample.hue),
       title: Text(sample.title),
       subtitle: Text(sample.author),
-      trailing: Text(inLibrary ? 'Open' : 'Add'),
+      trailing: inLibrary
+          ? IconButton(
+              tooltip: 'Read',
+              onPressed: () {
+                final book = c.books.firstWhere((b) => b.id == sample.id);
+                Navigator.of(context).push(
+                  MaterialPageRoute<void>(
+                    builder: (_) => EbookReaderScreen(book: book),
+                  ),
+                );
+              },
+              icon: const Icon(Icons.auto_stories_outlined),
+            )
+          : const Text('Add'),
       onTap: () => c.addSample(sample),
     );
   }
@@ -382,7 +402,19 @@ class _BookTile extends StatelessWidget {
           book.source.name.toUpperCase(),
           '$shorts shorts',
           if (prog != null) 'Resume #${prog.shortIndex + 1}',
+          if (c.readerLocations.containsKey(book.id)) 'In the reader',
         ].join(' · '),
+      ),
+      trailing: IconButton(
+        tooltip: 'Read',
+        onPressed: () {
+          Navigator.of(context).push(
+            MaterialPageRoute<void>(
+              builder: (_) => EbookReaderScreen(book: book),
+            ),
+          );
+        },
+        icon: const Icon(Icons.auto_stories_outlined),
       ),
       onTap: () async {
         await c.openBook(book);

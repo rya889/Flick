@@ -2,8 +2,10 @@ import 'package:flutter/material.dart';
 import 'package:provider/provider.dart';
 
 import '../models/models.dart';
+import '../models/reader_sync.dart';
 import '../state/flick_controller.dart';
 import 'paywall_sheet.dart';
+import 'sync_sheet.dart';
 
 Future<void> showSettingsSheet(BuildContext context) {
   return showModalBottomSheet<void>(
@@ -61,6 +63,21 @@ class SettingsSheet extends StatelessWidget {
               onSelectionChanged: (set) => c.setThemePreference(set.first),
             ),
             const SizedBox(height: 20),
+            ListTile(
+              contentPadding: EdgeInsets.zero,
+              leading: const Icon(Icons.sync),
+              title: const Text('Sync library'),
+              subtitle: Text(switch (c.syncTarget) {
+                SyncTarget.device => 'This device',
+                SyncTarget.googleDrive => 'Google Drive',
+                SyncTarget.files => 'iCloud or Files',
+              }),
+              onTap: () {
+                final host = Navigator.of(context).context;
+                Navigator.pop(context);
+                showSyncSheet(host);
+              },
+            ),
             ListTile(
               contentPadding: EdgeInsets.zero,
               title: const Text('Listen today'),

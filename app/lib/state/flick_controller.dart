@@ -6,7 +6,10 @@ import 'package:flutter_tts/flutter_tts.dart';
 import 'package:share_plus/share_plus.dart';
 
 import '../models/models.dart';
+import '../models/reader_sync.dart';
+import '../services/book_pages.dart';
 import '../services/catalog_store.dart';
+import '../services/short_builder.dart';
 import '../services/plus_service.dart';
 import '../services/tldr_api.dart';
 
@@ -58,6 +61,11 @@ class FlickController extends ChangeNotifier {
   String? tldrError;
   TldrHealth? tldrHealth;
   double playbackSpeed = 1.0;
+  SyncTarget syncTarget = SyncTarget.device;
+  DateTime? lastLibraryBackup;
+  Map<String, ReaderLocation> readerLocations = {};
+  double readerFontSize = 18;
+  ReaderPaper readerPaper = ReaderPaper.paper;
   int listenSecondsToday = 0;
   String listenDay = '';
   int karaokeWord = -1;
@@ -137,6 +145,11 @@ class FlickController extends ChangeNotifier {
     plusActive = _plus.plusActive;
     themePreference = await _store.themePreference;
     playbackSpeed = await _store.playbackSpeed;
+    syncTarget = await _store.syncTarget;
+    lastLibraryBackup = await _store.lastLibraryBackup;
+    readerLocations = await _store.loadReaderLocations();
+    readerFontSize = await _store.readerFontSize;
+    readerPaper = await _store.readerPaper;
     books = await _store.loadBooks();
     progress = await _store.loadProgress();
     hearts = await _store.loadHearts();
@@ -522,6 +535,88 @@ class FlickController extends ChangeNotifier {
     themePreference = value;
     await _store.setThemePreference(value);
     notifyListeners();
+  }
+
+  Future<List<StoredChapterSpan>> chapterSpans(String bookId) =>
+      _store.loadChapterSpans(bookId);
+
+  Future<void> saveReaderLocation(ReaderLocation location) async {
+    readerLocations[location.bookId] = location;
+    await _store.saveReaderLocations(readerLocations);
+    notifyListeners();
+  }
+
+  Future<void> setReaderFontSize(double value) async {
+    readerFontSize = value.clamp(14, 32);
+    await _store.setReaderFontSize(readerFontSize);
+    notifyListeners();
+  }
+
+  Future<void> setReaderPaper(ReaderPaper value) async {
+    readerPaper = value;
+    await _store.setReaderPaper(value);
+    notifyListeners();
+  }
+
+  Future<void> setSyncTarget(SyncTarget value) async {
+    syncTarget = value;
+    await _store.setSyncTarget(value);
+    notifyListeners();
+  }
+
+  LibrarySnapshot librarySnapshot() {
+    return LibrarySnapshot(
+      exportedAt: DateTime.now(),
+      books: books,
+      shortsByBook: shortsByBook,
+      progress: progress,
+      reader: readerLocations,
+      hearts: hearts,
+      saves: saves,
+    );
+  }
+
+  Future<String> exportLibraryJson() async {
+    final json = librarySnapshot().encode();
+    lastLibraryBackup = DateTime.now();
+    await _store.setLastLibraryBackup(lastLibraryBackup!);
+    notifyListeners();
+    return json;
+  }
+
+  Future<String> restoreLibraryJson(String raw) async {
+    final incoming = LibrarySnapshot.decode(raw);
+    final plan = planLibraryMerge(
+      localBooks: books,
+      localProgress: progress,
+      localReader: readerLocations,
+      localHearts: hearts,
+      localSaves: saves,
+      incoming: incoming,
+    );
+    for (final book in plan.booksToAdd) {
+      var shorts = plan.shortsForNewBooks[book.id] ?? const <ShortSegment>[];
+      if (shorts.isEmpty && book.text.trim().isNotEmpty) {
+        shorts = buildShorts(book);
+      }
+      await _store.importBookBundle(book, shorts);
+      shortsByBook[book.id] = shorts;
+    }
+    if (plan.booksToAdd.isNotEmpty) {
+      books = [...plan.booksToAdd, ...books];
+    }
+    progress = plan.progress;
+    readerLocations = plan.reader;
+    hearts = plan.hearts;
+    saves = plan.saves;
+    await _store.saveProgress(progress);
+    await _store.saveReaderLocations(readerLocations);
+    await _store.saveHearts(hearts);
+    await _store.saveSaves(saves);
+    notifyListeners();
+    return 'Added ${plan.booksToAdd.length} books. '
+        'Updated ${plan.readerUpdates} reader places and '
+        '${plan.progressUpdates} Flick positions.';
   }
 
   Future<void> setPlaybackSpeed(double value) async {
