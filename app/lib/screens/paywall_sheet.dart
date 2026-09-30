@@ -3,7 +3,7 @@ import 'package:provider/provider.dart';
 
 import '../state/flick_controller.dart';
 
-enum PaywallReason { listenCap, aiTldr, settings }
+enum PaywallReason { listenCap, libraryCap, epub, settings }
 
 Future<void> showPaywallSheet(
   BuildContext context, {
@@ -50,9 +50,10 @@ class _PaywallSheetState extends State<PaywallSheet> {
     final c = context.watch<FlickController>();
     final demo = c.plusService.usesDemo;
     final headline = switch (widget.reason) {
-      PaywallReason.listenCap => 'Keep listening',
-      PaywallReason.aiTldr => 'Unlock AI TLDR',
-      PaywallReason.settings => 'Flick Plus',
+      PaywallReason.listenCap => 'Listen',
+      PaywallReason.libraryCap => 'Library is full',
+      PaywallReason.epub => 'EPUB is Premium',
+      PaywallReason.settings => 'Flick Premium',
     };
 
     return SafeArea(
@@ -72,28 +73,24 @@ class _PaywallSheetState extends State<PaywallSheet> {
             ),
             const SizedBox(height: 12),
             Text(
-              'Plus includes AI TLDR (Condense, Summary, Quotes) and unlimited Listen. Bounce stays free.',
+              'Free includes 2 books as TXT or pasted text, the page reader, follow-along, and Listen. Premium raises the library to 50 books and adds EPUB.',
               style: Theme.of(context).textTheme.bodyMedium,
             ),
             const SizedBox(height: 20),
             FilledButton(
-              onPressed: _busy ? null : () => _run(c.purchasePlusMonthly),
+              onPressed: _busy || c.plusActive
+                  ? null
+                  : () => _run(c.purchasePremium),
               child: Text(
-                demo
-                    ? r'Start Plus · $6.99/mo (demo)'
-                    : r'Start Plus · $6.99/mo',
+                demo ? 'Unlock Premium on this device' : 'Unlock Premium',
               ),
             ),
             const SizedBox(height: 8),
-            OutlinedButton(
-              onPressed: _busy ? null : () => _run(c.purchasePlusYearly),
-              child: Text(
-                demo
-                    ? r'Yearly · $49.99 · 7-day trial (demo)'
-                    : r'Yearly · $49.99 · 7-day trial',
+            if (!demo && !c.plusActive) ...[
+              OutlinedButton(
+                onPressed: _busy ? null : () => _run(c.purchasePlusYearly),
+                child: const Text(r'Or yearly · $49.99'),
               ),
-            ),
-            if (!demo) ...[
               const SizedBox(height: 8),
               TextButton(
                 onPressed: _busy ? null : () => _run(c.restorePurchases),
@@ -124,8 +121,8 @@ class _PaywallSheetState extends State<PaywallSheet> {
             if (c.plusActive)
               Text(
                 demo
-                    ? 'Plus demo is active on this device.'
-                    : 'Flick Plus is active.',
+                    ? 'Premium is unlocked on this device.'
+                    : 'Flick Premium is active.',
                 textAlign: TextAlign.center,
                 style: Theme.of(context).textTheme.bodyMedium,
               ),

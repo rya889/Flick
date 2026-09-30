@@ -1,3 +1,7 @@
+import 'dart:math';
+
+import 'package:flutter/painting.dart';
+
 import '../models/models.dart';
 
 class ReaderChapter {
@@ -138,8 +142,49 @@ int charsPerPage(double fontSize) {
   return lines * charsPerLine;
 }
 
+int fittedCharBudget({
+  required TextStyle style,
+  required double maxWidth,
+  required double maxHeight,
+}) {
+  if (maxWidth < 40 || maxHeight < 40) {
+    return charsPerPage(style.fontSize ?? 18);
+  }
+  final line = TextPainter(
+    text: TextSpan(text: 'M', style: style),
+    textDirection: TextDirection.ltr,
+  )..layout(maxWidth: maxWidth);
+  final lineHeight = line.height;
+  if (lineHeight <= 0) return charsPerPage(style.fontSize ?? 18);
+  // Leave one line of slack so the last line is not clipped.
+  final lines = max(1, (maxHeight / lineHeight).floor() - 1);
+  const sample = 'The quick brown fox jumps over the lazy dog. ';
+  final wide = TextPainter(
+    text: TextSpan(text: sample, style: style),
+    textDirection: TextDirection.ltr,
+  )..layout(maxWidth: maxWidth);
+  final charWidth = wide.width / sample.length;
+  final perLine = max(12, (maxWidth / charWidth).floor() - 1);
+  return lines * perLine;
+}
+
+List<PageSlice> paginateBookFitted(
+  List<ReaderChapter> chapters, {
+  required TextStyle style,
+  required double maxWidth,
+  required double maxHeight,
+}) {
+  return _paginateChapters(
+    chapters,
+    fittedCharBudget(style: style, maxWidth: maxWidth, maxHeight: maxHeight),
+  );
+}
+
 List<PageSlice> paginateBook(List<ReaderChapter> chapters, double fontSize) {
-  final budget = charsPerPage(fontSize);
+  return _paginateChapters(chapters, charsPerPage(fontSize));
+}
+
+List<PageSlice> _paginateChapters(List<ReaderChapter> chapters, int budget) {
   final pages = <PageSlice>[];
   for (final chapter in chapters) {
     final slices = _paginate(chapter.text, budget);

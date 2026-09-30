@@ -10,6 +10,8 @@ import '../models/reader_sync.dart';
 import '../services/book_pages.dart';
 import '../services/catalog_store.dart';
 import '../services/short_builder.dart';
+import '../services/library_access.dart';
+import '../services/progress_bridge.dart';
 import '../services/plus_service.dart';
 import '../services/tldr_api.dart';
 import '../services/tts_voice.dart';
@@ -67,6 +69,12 @@ class FlickController extends ChangeNotifier {
   Map<String, ReaderLocation> readerLocations = {};
   double readerFontSize = 18;
   ReaderPaper readerPaper = ReaderPaper.paper;
+  bool readerFollowAlong = false;
+  bool readerOpen = false;
+  int readerSpokenWord = -1;
+  int readerPageFinishedGen = 0;
+  int _readerSpeakGen = 0;
+  bool _readerUtterance = false;
   int listenSecondsToday = 0;
   String listenDay = '';
   int karaokeWord = -1;
@@ -123,7 +131,7 @@ class FlickController extends ChangeNotifier {
     return max(0, freeListenCapSeconds - listenSecondsToday);
   }
 
-  bool get listenCapped => !plusActive && listenSecondsToday >= freeListenCapSeconds;
+  bool get listenCapped => false;
 
   void reportBootstrapError(Object error) {
     bootstrapError = error.toString();
@@ -154,6 +162,8 @@ class FlickController extends ChangeNotifier {
     readerLocations = await _store.loadReaderLocations();
     readerFontSize = await _store.readerFontSize;
     readerPaper = await _store.readerPaper;
+    readerFollowAlong = await _store.readerFollowAlong;
+    contentMode = ContentMode.full;
     books = await _store.loadBooks();
     progress = await _store.loadProgress();
     hearts = await _store.loadHearts();
@@ -290,7 +300,8 @@ class FlickController extends ChangeNotifier {
     playMode = PlayMode.story;
     final shorts = shortsByBook[book.id] ?? await _store.loadShorts(book.id);
     shortsByBook[book.id] = shorts;
-    final resume = shortIndex ?? progress[book.id]?.shortIndex ?? 0;
+    final resume = shortIndex ??
+        await _shortIndexForOpen(book, shorts);
     queue = shorts.map((s) => FeedItem(book: book, short: s)).toList();
     queueIndex = resume.clamp(0, max(0, queue.length - 1));
     await _store.setLastBookId(book.id);
@@ -318,6 +329,7 @@ class FlickController extends ChangeNotifier {
   }
 
   Future<void> importPaste(String title, String text) async {
+    if (_blocked(BookSource.paste)) return;
     final book = await _store.importText(title: title, text: text);
     books = [book, ...books.where((b) => b.id != book.id)];
     shortsByBook[book.id] = await _store.loadShorts(book.id);
@@ -327,6 +339,7 @@ class FlickController extends ChangeNotifier {
   }
 
   Future<void> importTxtFile(String fileName, String text) async {
+    if (_blocked(BookSource.txt)) return;
     final title = fileName.replaceAll(RegExp(r'\.txt$', caseSensitive: false), '');
     final book = await _store.importText(
       title: title,
@@ -342,6 +355,7 @@ class FlickController extends ChangeNotifier {
   }
 
   Future<void> importEpubFile(String fileName, Uint8List bytes) async {
+    if (_blocked(BookSource.epub)) return;
     final book = await _store.importEpubBytes(fileName: fileName, bytes: bytes);
     books = [book, ...books.where((b) => b.id != book.id)];
     shortsByBook[book.id] = await _store.loadShorts(book.id);
@@ -379,7 +393,7 @@ class FlickController extends ChangeNotifier {
       return;
     }
     playMode = PlayMode.bounce;
-    contentMode = ContentMode.tldr;
+    contentMode = ContentMode.full;
     queue = _buildBounceQueue();
     queueIndex = 0;
     tabIndex = 0;
@@ -417,6 +431,7 @@ class FlickController extends ChangeNotifier {
     if (queue.isEmpty) return;
     queueIndex = index.clamp(0, queue.length - 1);
     _persistProgress();
+    unawaited(_mirrorReaderFromCurrentShort());
     _resetKaraoke();
     notifyListeners();
     unawaited(ensureAiTldrForCurrent());
@@ -435,6 +450,7 @@ class FlickController extends ChangeNotifier {
       queueIndex += 1;
     }
     _persistProgress();
+    unawaited(_mirrorReaderFromCurrentShort());
     _resetKaraoke();
     notifyListeners();
     unawaited(ensureAiTldrForCurrent());
@@ -444,6 +460,7 @@ class FlickController extends ChangeNotifier {
     if (queue.isEmpty || queueIndex <= 0) return;
     queueIndex -= 1;
     _persistProgress();
+    unawaited(_mirrorReaderFromCurrentShort());
     _resetKaraoke();
     notifyListeners();
     unawaited(ensureAiTldrForCurrent());
@@ -459,6 +476,7 @@ class FlickController extends ChangeNotifier {
     if (idx >= 0) {
       queueIndex = idx;
       _persistProgress();
+      unawaited(_mirrorReaderFromCurrentShort());
       _resetKaraoke();
       notifyListeners();
     }
@@ -574,7 +592,83 @@ class FlickController extends ChangeNotifier {
   Future<void> saveReaderLocation(ReaderLocation location) async {
     readerLocations[location.bookId] = location;
     await _store.saveReaderLocations(readerLocations);
+    await _mirrorShortFromReader(location);
     notifyListeners();
+  }
+
+  LibraryBlock? blockFor(BookSource source) {
+    return blockImport(
+      source,
+      premium: plusActive,
+      importedBooks: countedImports(books),
+    );
+  }
+
+  int get importedBookCount => countedImports(books);
+
+  int get libraryBookLimit => bookLimitFor(premium: plusActive);
+
+  bool _blocked(BookSource source) => blockFor(source) != null;
+
+  Future<void> setReaderFollowAlong(bool value) async {
+    readerFollowAlong = value;
+    await _store.setReaderFollowAlong(value);
+    if (!value) await stopReaderSpeech();
+    notifyListeners();
+  }
+
+  void beginReaderSession() {
+    readerOpen = true;
+    playing = false;
+    _karaokeTimer?.cancel();
+    unawaited(_tts.stop());
+    notifyListeners();
+  }
+
+  void endReaderSession(String bookId) {
+    readerOpen = false;
+    _readerUtterance = false;
+    unawaited(_tts.stop());
+    final prog = progress[bookId];
+    if (prog != null && activeBook?.id == bookId && queue.isNotEmpty) {
+      queueIndex = prog.shortIndex.clamp(0, queue.length - 1);
+    }
+    playing = false;
+    _karaokeTimer?.cancel();
+    notifyListeners();
+  }
+
+  int get readerSpeakGen => _readerSpeakGen;
+
+  Future<void> speakReaderPage(String text) async {
+    final spoken = text.trim();
+    if (spoken.isEmpty || muted) return;
+    final gen = ++_readerSpeakGen;
+    _readerUtterance = false;
+    readerSpokenWord = 0;
+    try {
+      await _configureTts();
+      await _tts.stop();
+      if (gen != _readerSpeakGen) return;
+      _readerUtterance = true;
+      notifyListeners();
+      if (!kIsWeb && defaultTargetPlatform == TargetPlatform.iOS) {
+        await _tts.setSpeechRate((0.48 * playbackSpeed).clamp(0.3, 0.7));
+      } else {
+        await _tts.setSpeechRate(0.45 * playbackSpeed);
+      }
+      if (_ttsVoice != null) await _tts.setVoice(_ttsVoice!);
+      await _tts.speak(spoken);
+    } catch (e, st) {
+      debugPrint('Flick reader TTS failed: $e\n$st');
+    }
+  }
+
+  Future<void> stopReaderSpeech() async {
+    _readerSpeakGen += 1;
+    _readerUtterance = false;
+    readerSpokenWord = -1;
+    await _tts.stop();
   }
 
   Future<void> setReaderFontSize(double value) async {
@@ -815,6 +909,11 @@ class FlickController extends ChangeNotifier {
     _ttsHandlersInstalled = true;
 
     _tts.setStartHandler(() {
+      if (_readerUtterance) {
+        readerSpokenWord = 0;
+        notifyListeners();
+        return;
+      }
       if (!_playbackUsesTts || !playing) return;
       if (karaokeWord < 0) {
         karaokeWord = _ttsSpeakBaseWordIndex;
@@ -823,6 +922,14 @@ class FlickController extends ChangeNotifier {
     });
 
     _tts.setProgressHandler((text, start, end, word) {
+      if (_readerUtterance) {
+        final local = _wordIndexAtOffset(text, start);
+        if (local != readerSpokenWord) {
+          readerSpokenWord = local;
+          notifyListeners();
+        }
+        return;
+      }
       if (!_playbackUsesTts || !playing) return;
       final local = _wordIndexAtOffset(text, start);
       final next = _ttsSpeakBaseWordIndex + local;
@@ -833,6 +940,12 @@ class FlickController extends ChangeNotifier {
     });
 
     _tts.setCompletionHandler(() {
+      if (_readerUtterance) {
+        _readerUtterance = false;
+        readerPageFinishedGen = _readerSpeakGen;
+        notifyListeners();
+        return;
+      }
       if (!playing) return;
       if (!_playbackUsesTts) return;
       _karaokeTimer?.cancel();
@@ -875,6 +988,14 @@ class FlickController extends ChangeNotifier {
     }
   }
 
+  Future<bool> purchasePremium() async {
+    final ok = await _plus.purchasePremium();
+    plusActive = _plus.plusActive;
+    await _store.setPlusDemo(_plus.demoActive);
+    notifyListeners();
+    return ok;
+  }
+
   Future<bool> purchasePlusMonthly() async {
     final ok = await _plus.purchaseMonthly();
     plusActive = _plus.plusActive;
@@ -899,6 +1020,74 @@ class FlickController extends ChangeNotifier {
     notifyListeners();
     if (plusActive) unawaited(ensureAiTldrForCurrent());
     return ok;
+  }
+
+  Future<int> _shortIndexForOpen(
+    LibraryBook book,
+    List<ShortSegment> shorts,
+  ) async {
+    final prog = progress[book.id];
+    final reader = readerLocations[book.id];
+    if (reader != null &&
+        (prog == null || reader.updatedAt.isAfter(prog.updatedAt))) {
+      final chapters = chaptersForBook(
+        book,
+        stored: await _store.loadChapterSpans(book.id),
+      );
+      final index = shortIndexAtPlace(
+        shortPlaces(chapters, shorts),
+        reader.chapterIndex,
+        reader.charOffset,
+      );
+      if (index != null) return index;
+    }
+    return prog?.shortIndex ?? 0;
+  }
+
+  Future<void> _mirrorShortFromReader(ReaderLocation location) async {
+    final book = books.cast<LibraryBook?>().firstWhere(
+          (b) => b?.id == location.bookId,
+          orElse: () => null,
+        );
+    if (book == null) return;
+    final shorts = shortsByBook[book.id] ?? await _store.loadShorts(book.id);
+    shortsByBook[book.id] = shorts;
+    final chapters = chaptersForBook(
+      book,
+      stored: await _store.loadChapterSpans(book.id),
+    );
+    final index = shortIndexAtPlace(
+      shortPlaces(chapters, shorts),
+      location.chapterIndex,
+      location.charOffset,
+    );
+    if (index == null || index < 0 || index >= shorts.length) return;
+    progress[book.id] = ReadingProgress(
+      bookId: book.id,
+      shortId: shorts[index].id,
+      shortIndex: index,
+      updatedAt: location.updatedAt,
+    );
+    await _store.saveProgress(progress);
+  }
+
+  Future<void> _mirrorReaderFromCurrentShort() async {
+    final item = current;
+    if (item == null || playMode != PlayMode.story || readerOpen) return;
+    final chapters = chaptersForBook(
+      item.book,
+      stored: await _store.loadChapterSpans(item.book.id),
+    );
+    final loc = readerLocationForShort(
+      bookId: item.book.id,
+      chapters: chapters,
+      shorts: shortsByBook[item.book.id] ?? [item.short],
+      shortIndex: item.short.index,
+      updatedAt: DateTime.now(),
+    );
+    if (loc == null) return;
+    readerLocations[item.book.id] = loc;
+    await _store.saveReaderLocations(readerLocations);
   }
 
   void _persistProgress() {

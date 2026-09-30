@@ -13,6 +13,7 @@ class PlusService {
   static const entitlementId = 'flick_plus';
   static const monthlyProductId = 'flick_plus_monthly';
   static const yearlyProductId = 'flick_plus_yearly';
+  static const premiumProductId = 'flick_premium';
 
   static const _rcKey = String.fromEnvironment('REVENUECAT_API_KEY');
   static const _forceDemo = bool.fromEnvironment('FLICK_PLUS_DEMO', defaultValue: false);
@@ -99,6 +100,22 @@ class PlusService {
     return current.monthly ??
         current.getPackage(monthlyProductId) ??
         _findPackage(monthlyProductId);
+  }
+
+  Package? get premiumPackage {
+    final current = offerings?.current;
+    if (current == null) return null;
+    return current.lifetime ??
+        current.getPackage(premiumProductId) ??
+        _findPackage(premiumProductId);
+  }
+
+  Future<bool> purchasePremium() async {
+    final pkg = premiumPackage;
+    if (pkg != null) return purchase(pkg);
+    if (usesDemo) return setDemo(true);
+    lastError = 'Premium unlock is not in the store yet';
+    return false;
   }
 
   Package? get yearlyPackage {

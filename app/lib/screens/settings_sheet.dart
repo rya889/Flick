@@ -21,17 +21,6 @@ class SettingsSheet extends StatelessWidget {
   @override
   Widget build(BuildContext context) {
     final c = context.watch<FlickController>();
-    final remaining = Duration(seconds: c.listenRemainingSeconds);
-    final health = c.tldrHealth;
-    final providers = health == null
-        ? 'checking…'
-        : health.anyProvider
-            ? [
-                if (health.groq) 'Groq',
-                if (health.gemini) 'Gemini',
-                if (health.gateway) 'Gateway',
-              ].join(' · ')
-            : 'no AI keys on server';
 
     return SafeArea(
       child: Padding(
@@ -80,20 +69,16 @@ class SettingsSheet extends StatelessWidget {
             ),
             ListTile(
               contentPadding: EdgeInsets.zero,
-              title: const Text('Listen today'),
-              subtitle: Text(
-                c.plusActive
-                    ? 'Unlimited (Plus)'
-                    : '${remaining.inMinutes} min left of 60',
-              ),
+              title: const Text('Listen'),
+              subtitle: const Text('Included with the reader'),
             ),
             ListTile(
               contentPadding: EdgeInsets.zero,
-              title: Text(c.plusActive ? 'Flick Plus · active' : 'Flick Plus'),
+              title: Text(c.plusActive ? 'Flick Premium · active' : 'Flick Premium'),
               subtitle: Text(
-                c.plusService.usesDemo
-                    ? r'$6.99/mo · $49.99/yr · demo / web'
-                    : r'$6.99/mo · $49.99/yr · RevenueCat',
+                c.plusActive
+                    ? '50 books · EPUB, TXT, and paste'
+                    : 'Free · 2 books · TXT and paste. Premium adds EPUB and a larger library.',
               ),
               trailing: const Icon(Icons.chevron_right),
               onTap: () => showPaywallSheet(
@@ -101,19 +86,14 @@ class SettingsSheet extends StatelessWidget {
                 reason: PaywallReason.settings,
               ),
             ),
-            ListTile(
-              contentPadding: EdgeInsets.zero,
-              title: const Text('AI TLDR proxy'),
-              subtitle: Text(providers),
-            ),
             if (c.plusActive && c.plusService.demoActive)
               TextButton(
                 onPressed: () => c.setPlusDemo(false),
-                child: const Text('Turn off Plus demo'),
+                child: const Text('Turn off Premium on this device'),
               ),
             const SizedBox(height: 8),
             Text(
-              'Local-first · OS TTS · Plus gates AI TLDR',
+              'Page reader and follow-along share one place in the book.',
               style: Theme.of(context).textTheme.bodyMedium?.copyWith(fontSize: 12),
               textAlign: TextAlign.center,
             ),

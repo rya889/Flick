@@ -5,8 +5,10 @@ import 'package:flutter/material.dart';
 import 'package:provider/provider.dart';
 
 import '../models/models.dart';
+import '../services/library_access.dart';
 import '../state/flick_controller.dart';
 import 'ebook_reader.dart';
+import 'paywall_sheet.dart';
 import 'sync_sheet.dart';
 
 class LibraryScreen extends StatefulWidget {
@@ -34,7 +36,9 @@ class _LibraryScreenState extends State<LibraryScreen> {
               Text('Library', style: Theme.of(context).textTheme.headlineMedium),
               const SizedBox(height: 4),
               Text(
-                'The anti-doomscroll reader',
+                c.plusActive
+                    ? '${c.importedBookCount} of ${c.libraryBookLimit} books · EPUB included'
+                    : '${c.importedBookCount} of ${c.libraryBookLimit} books · TXT and paste',
                 style: Theme.of(context).textTheme.bodyMedium,
               ),
             ],
@@ -105,6 +109,7 @@ class _LibraryScreenState extends State<LibraryScreen> {
     final choice = await showModalBottomSheet<String>(
       context: context,
       builder: (context) {
+        final premium = context.read<FlickController>().plusActive;
         return SafeArea(
           child: Column(
             mainAxisSize: MainAxisSize.min,
@@ -112,7 +117,11 @@ class _LibraryScreenState extends State<LibraryScreen> {
               ListTile(
                 leading: const Icon(Icons.menu_book_outlined),
                 title: const Text('EPUB file'),
-                subtitle: const Text('Import a .epub from your device'),
+                subtitle: Text(
+                  premium
+                      ? 'Import a .epub from your device'
+                      : 'Premium · EPUB import',
+                ),
                 onTap: () => Navigator.pop(context, 'epub'),
               ),
               ListTile(
@@ -131,6 +140,13 @@ class _LibraryScreenState extends State<LibraryScreen> {
       },
     );
     if (!context.mounted || choice == null) return;
+    final source = switch (choice) {
+      'epub' => BookSource.epub,
+      'txt' => BookSource.txt,
+      _ => BookSource.paste,
+    };
+    if (!await _allowImport(context, source)) return;
+    if (!context.mounted) return;
     switch (choice) {
       case 'epub':
         await _pickEpub(context);
@@ -139,6 +155,27 @@ class _LibraryScreenState extends State<LibraryScreen> {
       case 'paste':
         await _showPasteSheet(context);
     }
+  }
+
+  Future<bool> _allowImport(BuildContext context, BookSource source) async {
+    final c = context.read<FlickController>();
+    final block = c.blockFor(source);
+    if (block == null) return true;
+    if (c.plusActive) {
+      ScaffoldMessenger.of(context).showSnackBar(
+        SnackBar(
+          content: Text('This library holds ${c.libraryBookLimit} books.'),
+        ),
+      );
+      return false;
+    }
+    await showPaywallSheet(
+      context,
+      reason: block == LibraryBlock.extensionLocked
+          ? PaywallReason.epub
+          : PaywallReason.libraryCap,
+    );
+    return false;
   }
 
   Future<void> _pickEpub(BuildContext context) async {

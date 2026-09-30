@@ -249,6 +249,12 @@ class CatalogStore {
   Future<void> setReaderPaper(ReaderPaper value) =>
       _setMeta('reader.paper', value.name);
 
+  Future<bool> get readerFollowAlong async =>
+      (await _getMeta('reader.follow')) == 'true';
+
+  Future<void> setReaderFollowAlong(bool value) =>
+      _setMeta('reader.follow', value ? 'true' : 'false');
+
   Future<void> importBookBundle(
     LibraryBook book,
     List<ShortSegment> shorts,

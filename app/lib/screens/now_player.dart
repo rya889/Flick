@@ -251,24 +251,6 @@ class _ChromeBar extends StatelessWidget {
         children: [
           Row(
             children: [
-              ChoiceChip(
-                label: const Text('Full'),
-                selected: c.contentMode == ContentMode.full,
-                onSelected: (_) => c.setContentMode(ContentMode.full),
-              ),
-              const SizedBox(width: 8),
-              ChoiceChip(
-                label: Text(c.plusActive ? 'TLDR' : 'TLDR · lite'),
-                selected: c.contentMode == ContentMode.tldr,
-                onSelected: (_) {
-                  if (!c.plusActive) {
-                    // Free extractive still allowed
-                    c.setContentMode(ContentMode.tldr);
-                    return;
-                  }
-                  c.setContentMode(ContentMode.tldr);
-                },
-              ),
               const Spacer(),
               IconButton(
                 tooltip: c.muted ? 'Unmute / Listen' : 'Mute',
@@ -313,79 +295,6 @@ class _ChromeBar extends StatelessWidget {
               ),
             ],
           ),
-          if (c.contentMode == ContentMode.tldr) ...[
-            const SizedBox(height: 8),
-            SegmentedButton<TldrSubmode>(
-              showSelectedIcon: false,
-              style: ButtonStyle(
-                visualDensity: VisualDensity.compact,
-                tapTargetSize: MaterialTapTargetSize.shrinkWrap,
-                textStyle: WidgetStatePropertyAll(
-                  Theme.of(context).textTheme.labelLarge?.copyWith(fontSize: 12),
-                ),
-              ),
-              segments: const [
-                ButtonSegment(
-                  value: TldrSubmode.condense,
-                  label: Text('Brief'),
-                  tooltip: 'Condense — same beat, fewer words',
-                ),
-                ButtonSegment(
-                  value: TldrSubmode.summary,
-                  label: Text('Summary'),
-                  tooltip: 'Summary — gist of the passage',
-                ),
-                ButtonSegment(
-                  value: TldrSubmode.quotes,
-                  label: Text('Quotes'),
-                  tooltip: 'Key quotes',
-                ),
-              ],
-              selected: {c.tldrSubmode},
-              onSelectionChanged: (set) {
-                final mode = set.first;
-                c.setTldrSubmode(mode);
-                if (c.plusActive) {
-                  // AI fetch is triggered by setTldrSubmode
-                } else if (mode != TldrSubmode.condense) {
-                  // Extractive still works; show Plus tease for AI quality.
-                  showPaywallSheet(context, reason: PaywallReason.aiTldr);
-                }
-              },
-            ),
-            if (c.tldrLoading)
-              const Padding(
-                padding: EdgeInsets.only(top: 8),
-                child: LinearProgressIndicator(minHeight: 2),
-              ),
-            if (!c.plusActive)
-              Padding(
-                padding: const EdgeInsets.only(top: 6),
-                child: Text(
-                  'Extractive lite · Plus unlocks AI TLDR',
-                  style: Theme.of(context).textTheme.bodyMedium?.copyWith(fontSize: 12),
-                ),
-              )
-            else if (c.tldrError != null)
-              Padding(
-                padding: const EdgeInsets.only(top: 6),
-                child: Text(
-                  c.tldrError!,
-                  style: Theme.of(context).textTheme.bodyMedium?.copyWith(
-                        fontSize: 12,
-                        color: Theme.of(context).colorScheme.error,
-                      ),
-                ),
-              )
-            else if (c.current?.short.tldrSource == 'ai')
-              Padding(
-                padding: const EdgeInsets.only(top: 6),
-                child: Text(
-                  'AI TLDR',
-                  style: Theme.of(context).textTheme.bodyMedium?.copyWith(fontSize: 12),
-                ),
-              ),
-          ],
           const SizedBox(height: 8),
           Row(
             mainAxisAlignment: MainAxisAlignment.spaceEvenly,
