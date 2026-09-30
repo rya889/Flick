@@ -208,19 +208,25 @@ class _EbookReaderScreenState extends State<EbookReaderScreen> {
   void _startFollow() {
     _followTimer?.cancel();
     final c = _controller;
-    if (c == null || _pages.isEmpty) return;
+    if (c == null || _pages.isEmpty || !_followPlaying) return;
     final page = _pages[_pageIndex.clamp(0, _pages.length - 1)];
-    _followWord = 0;
-    if (!c.muted && c.listening) {
+    setState(() => _followWord = 0);
+    c.readerSpokenWord = 0;
+    if (!c.muted) {
+      c.listening = true;
       c.speakReaderPage(page.text);
       _armedGen = c.readerSpeakGen;
+      _heardFinish = c.readerPageFinishedGen;
       return;
     }
-    final words = page.text.split(RegExp(r'\s+')).where((w) => w.isNotEmpty);
-    final count = words.length;
+    final count = page.text
+        .split(RegExp(r'\s+'))
+        .where((w) => w.isNotEmpty)
+        .length;
+    if (count == 0) return;
     final ms = (420 / c.playbackSpeed).round().clamp(100, 900);
     _followTimer = Timer.periodic(Duration(milliseconds: ms), (timer) {
-      if (!mounted || !_followPlaying) {
+      if (!mounted || !_followPlaying || c.readerFollowAlong == false) {
         timer.cancel();
         return;
       }
@@ -230,19 +236,67 @@ class _EbookReaderScreenState extends State<EbookReaderScreen> {
         return;
       }
       setState(() => _followWord += 1);
-      _persist();
     });
   }
 
-  void _toggleFollowPlay() {
-    setState(() => _followPlaying = !_followPlaying);
-    if (_followPlaying) {
+  Future<void> _toggleFollow() async {
+    final c = _controller;
+    if (c == null) return;
+    final turnOn = !(c.readerFollowAlong && _followPlaying);
+    if (!turnOn) {
+      _followTimer?.cancel();
+      _followPlaying = false;
+      await c.setReaderFollowAlong(false);
+      await c.stopReaderSpeech();
+      if (mounted) setState(() => _followWord = -1);
+      return;
+    }
+    await c.setReaderFollowAlong(true);
+    if (c.muted) await c.toggleMute();
+    if (!mounted) return;
+    setState(() => _followPlaying = true);
+    _startFollow();
+  }
+
+  Future<void> _toggleListen() async {
+    final c = _controller;
+    if (c == null) return;
+    final wasMuted = c.muted;
+    await c.toggleMute();
+    if (!mounted) return;
+    if (wasMuted) {
+      await c.setReaderFollowAlong(true);
+      setState(() => _followPlaying = true);
       _startFollow();
     } else {
       _followTimer?.cancel();
-      _controller?.stopReaderSpeech();
-      setState(() => _followWord = -1);
+      await c.stopReaderSpeech();
+      if (_followPlaying) _startFollow();
     }
+  }
+
+  Future<void> _changeFont(double delta) async {
+    final c = _controller;
+    final fit = _fit;
+    if (c == null || fit == null) return;
+    final next = (c.readerFontSize + delta).clamp(14.0, 32.0);
+    if (next == c.readerFontSize) return;
+    await c.setReaderFontSize(next);
+    if (mounted) await _layoutFor(fit);
+  }
+
+  Future<void> _cyclePaper() async {
+    final c = _controller;
+    final fit = _fit;
+    if (c == null) return;
+    final next = switch (c.readerPaper) {
+      ReaderPaper.paper => ReaderPaper.sepia,
+      ReaderPaper.sepia => ReaderPaper.ink,
+      ReaderPaper.ink => ReaderPaper.paper,
+    };
+    await c.setReaderPaper(next);
+    if (mounted) setState(() {});
+    if (fit != null && mounted) await _layoutFor(fit);
   }
 
   Future<void> _showChapters() async {
@@ -310,6 +364,9 @@ class _EbookReaderScreenState extends State<EbookReaderScreen> {
                     behavior: HitTestBehavior.opaque,
                     onTapUp: _onTap,
                     child: PageView.builder(
+                      key: ValueKey(
+                        '${c.readerFontSize}-${c.readerPaper.name}-${_pages.length}',
+                      ),
                       controller: _pageController,
                       itemCount: _pages.length,
                       onPageChanged: (index) {
@@ -361,6 +418,14 @@ class _EbookReaderScreenState extends State<EbookReaderScreen> {
             overflow: TextOverflow.ellipsis,
             style: TextStyle(color: paper.ink, fontWeight: FontWeight.w600),
           ),
+          if (c.listenVoiceIsBasic && (_followPlaying || !c.muted))
+            const Padding(
+              padding: EdgeInsets.only(left: 4, right: 12, bottom: 2),
+              child: Text(
+                'Basic voice. For a natural one: Settings → Accessibility → Spoken Content → Voices → English → download Premium (Ava or Zoe), then tap Listen again.',
+                style: TextStyle(fontSize: 12),
+              ),
+            ),
           Row(
         children: [
           IconButton(
@@ -373,40 +438,18 @@ class _EbookReaderScreenState extends State<EbookReaderScreen> {
               child: Row(
                 children: [
                   IconButton(
-                    tooltip: c.readerFollowAlong
-                        ? 'Follow along on'
-                        : 'Follow along off',
-                    onPressed: () async {
-                      final next = !c.readerFollowAlong;
-                      await c.setReaderFollowAlong(next);
-                      if (!next) {
-                        _followTimer?.cancel();
-                        _followPlaying = false;
-                        setState(() => _followWord = -1);
-                      }
-                    },
+                    tooltip: _followPlaying
+                        ? 'Stop read-along'
+                        : 'Start read-along',
+                    onPressed: _toggleFollow,
                     icon: Icon(
-                      c.readerFollowAlong
-                          ? Icons.spatial_audio
-                          : Icons.spatial_audio_off,
-                      color: paper.ink,
+                      _followPlaying ? Icons.record_voice_over : Icons.spatial_audio_off,
+                      color: _followPlaying ? paper.ink : paper.ink.withValues(alpha: 0.45),
                     ),
                   ),
-                  if (c.readerFollowAlong)
-                    IconButton(
-                      tooltip: _followPlaying ? 'Pause follow' : 'Play follow',
-                      onPressed: _toggleFollowPlay,
-                      icon: Icon(
-                        _followPlaying ? Icons.pause_circle : Icons.play_circle,
-                        color: paper.ink,
-                      ),
-                    ),
                   IconButton(
                     tooltip: c.muted ? 'Listen' : 'Mute',
-                    onPressed: () async {
-                      await c.toggleMute();
-                      if (_followPlaying) _startFollow();
-                    },
+                    onPressed: _toggleListen,
                     icon: Icon(
                       c.muted ? Icons.volume_off : Icons.volume_up,
                       color: paper.ink,
@@ -414,33 +457,17 @@ class _EbookReaderScreenState extends State<EbookReaderScreen> {
                   ),
                   IconButton(
                     tooltip: 'Smaller text',
-                    onPressed: () {
-                      final next = (c.readerFontSize - 1).clamp(14, 32).toDouble();
-                      c.setReaderFontSize(next);
-                      _fit = null;
-                    },
+                    onPressed: () => _changeFont(-2),
                     icon: Icon(Icons.text_decrease, color: paper.ink),
                   ),
                   IconButton(
                     tooltip: 'Larger text',
-                    onPressed: () {
-                      final next = (c.readerFontSize + 1).clamp(14, 32).toDouble();
-                      c.setReaderFontSize(next);
-                      _fit = null;
-                    },
+                    onPressed: () => _changeFont(2),
                     icon: Icon(Icons.text_increase, color: paper.ink),
                   ),
                   IconButton(
                     tooltip: 'Paper',
-                    onPressed: () {
-                      final next = switch (c.readerPaper) {
-                        ReaderPaper.paper => ReaderPaper.sepia,
-                        ReaderPaper.sepia => ReaderPaper.ink,
-                        ReaderPaper.ink => ReaderPaper.paper,
-                      };
-                      c.setReaderPaper(next);
-                      _fit = null;
-                    },
+                    onPressed: _cyclePaper,
                     icon: Icon(Icons.contrast, color: paper.ink),
                   ),
                   IconButton(

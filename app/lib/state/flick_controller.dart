@@ -365,10 +365,8 @@ class FlickController extends ChangeNotifier {
   }
 
   void setTab(int index) {
+    if (index == 2) index = 0;
     tabIndex = index;
-    if (index == 2) {
-      enterBounce();
-    }
     notifyListeners();
   }
 
@@ -651,11 +649,12 @@ class FlickController extends ChangeNotifier {
       await _tts.stop();
       if (gen != _readerSpeakGen) return;
       _readerUtterance = true;
+      readerSpokenWord = 0;
       notifyListeners();
       if (!kIsWeb && defaultTargetPlatform == TargetPlatform.iOS) {
-        await _tts.setSpeechRate((0.48 * playbackSpeed).clamp(0.3, 0.7));
+        await _tts.setSpeechRate((0.5 * playbackSpeed).clamp(0.35, 0.65));
       } else {
-        await _tts.setSpeechRate(0.45 * playbackSpeed);
+        await _tts.setSpeechRate(0.5 * playbackSpeed);
       }
       if (_ttsVoice != null) await _tts.setVoice(_ttsVoice!);
       await _tts.speak(spoken);

@@ -4,14 +4,14 @@ class SpokenVoice {
     required this.locale,
     this.identifier,
     required this.natural,
+    this.rank = 1,
   });
 
   final String name;
   final String locale;
   final String? identifier;
-
-  /// Premium, enhanced, or a Siri voice. Compact system voices sound robotic.
   final bool natural;
+  final int rank;
 
   Map<String, String> toTtsVoice() {
     return {
@@ -43,17 +43,26 @@ SpokenVoice _normalize(Map<String, String> raw) {
   final identifier = raw['identifier'] ?? raw['id'];
   final quality = (raw['quality'] ?? '').toLowerCase();
   final id = (identifier ?? '').toLowerCase();
-  final natural = quality.contains('premium') ||
-      quality.contains('enhanced') ||
-      id.contains('.premium.') ||
-      id.contains('.enhanced.') ||
-      id.contains('siri');
+  final qualityRank = _qualityRank(quality, id);
+  final natural = qualityRank >= 2 || id.contains('siri');
   return SpokenVoice(
     name: name,
     locale: locale,
     identifier: identifier,
     natural: natural,
+    rank: qualityRank,
   );
+}
+
+int _qualityRank(String quality, String id) {
+  if (quality == '3' || quality.contains('premium') || id.contains('.premium.')) {
+    return 3;
+  }
+  if (quality == '2' || quality.contains('enhanced') || id.contains('.enhanced.')) {
+    return 2;
+  }
+  if (id.contains('siri')) return 2;
+  return 1;
 }
 
 int _score(SpokenVoice voice) {
@@ -66,12 +75,10 @@ int _score(SpokenVoice voice) {
           : 6;
   final id = (voice.identifier ?? '').toLowerCase();
   final name = voice.name.toLowerCase();
-  if (id.contains('.premium.') || id.contains('premium')) {
+  if (voice.rank >= 3) {
     score += 100;
-  } else if (id.contains('.enhanced.') || id.contains('enhanced')) {
+  } else if (voice.rank == 2) {
     score += 70;
-  } else if (id.contains('siri') || name.contains('siri')) {
-    score += 45;
   } else {
     score += 5;
   }

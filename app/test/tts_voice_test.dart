@@ -14,7 +14,7 @@ void main() {
         'name': 'Ava',
         'locale': 'en-US',
         'identifier': 'com.apple.voice.premium.en-US.Ava',
-        'quality': 'premium',
+        'quality': '3',
       },
       {
         'name': 'Daniel',

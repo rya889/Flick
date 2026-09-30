@@ -79,7 +79,6 @@ class _NowPlayerState extends State<NowPlayer> {
                     style: Theme.of(context).textTheme.headlineSmall,
                   ),
                   const Spacer(),
-                  const ModePill(),
                 ],
               ),
               const SizedBox(height: 10),

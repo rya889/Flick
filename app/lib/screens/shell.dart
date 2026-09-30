@@ -1,7 +1,6 @@
 import 'package:flutter/material.dart';
 import 'package:provider/provider.dart';
 
-import '../models/models.dart';
 import '../state/flick_controller.dart';
 import '../theme/flick_theme.dart';
 import 'library_screen.dart';
@@ -26,22 +25,16 @@ class FlickShell extends StatelessWidget {
 
     final showSettingsFab = tabIndex != 1;
 
-    final playerTab = tabIndex == 2 || tabIndex == 0;
+    final navIndex = tabIndex <= 0 ? 0 : 1;
+    final playerTab = tabIndex == 0;
 
     return Scaffold(
       body: SafeArea(
         child: playerTab ? const NowPlayer() : const LibraryScreen(),
       ),
       bottomNavigationBar: NavigationBar(
-        selectedIndex: tabIndex == 2 ? 2 : tabIndex,
-        onDestinationSelected: (i) {
-          final c = context.read<FlickController>();
-          if (i == 2) {
-            c.enterBounce();
-            return;
-          }
-          c.setTab(i);
-        },
+        selectedIndex: navIndex,
+        onDestinationSelected: (i) => context.read<FlickController>().setTab(i),
         destinations: const [
           NavigationDestination(
             icon: Icon(Icons.play_circle_outline),
@@ -52,11 +45,6 @@ class FlickShell extends StatelessWidget {
             icon: Icon(Icons.menu_book_outlined),
             selectedIcon: Icon(Icons.menu_book),
             label: 'Library',
-          ),
-          NavigationDestination(
-            icon: Icon(Icons.shuffle_outlined),
-            selectedIcon: Icon(Icons.shuffle),
-            label: 'Bounce',
           ),
         ],
       ),
@@ -80,7 +68,6 @@ class ModePill extends StatelessWidget {
 
   @override
   Widget build(BuildContext context) {
-    final c = context.watch<FlickController>();
     final signal = Theme.of(context).colorScheme.primary;
     return Container(
       padding: const EdgeInsets.all(3),
@@ -92,12 +79,7 @@ class ModePill extends StatelessWidget {
       child: Row(
         mainAxisSize: MainAxisSize.min,
         children: [
-          _seg(context, 'Story', c.playMode == PlayMode.story, () {
-            c.setPlayMode(PlayMode.story);
-          }),
-          _seg(context, 'Bounce', c.playMode == PlayMode.bounce, () {
-            c.enterBounce();
-          }),
+          _seg(context, 'Story', true, () {}),
         ],
       ),
     );
