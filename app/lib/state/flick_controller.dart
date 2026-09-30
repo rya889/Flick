@@ -12,6 +12,7 @@ import '../services/catalog_store.dart';
 import '../services/short_builder.dart';
 import '../services/plus_service.dart';
 import '../services/tldr_api.dart';
+import '../services/tts_voice.dart';
 
 class FeedItem {
   FeedItem({required this.book, required this.short});
@@ -77,6 +78,9 @@ class FlickController extends ChangeNotifier {
   bool _ttsConfigured = false;
   bool _ttsHandlersInstalled = false;
   int _ttsSpeakBaseWordIndex = 0;
+  Map<String, String>? _ttsVoice;
+  String? listenVoiceLabel;
+  bool listenVoiceIsBasic = true;
 
   PlusService get plusService => _plus;
 
@@ -217,6 +221,7 @@ class FlickController extends ChangeNotifier {
         );
       }
       await _tts.setLanguage('en-US');
+      await _preferNaturalVoice();
       // iOS speech rate is ~0.0–1.0 (0.5 ≈ normal). Scale mildly with playbackSpeed.
       final rate = (!kIsWeb && defaultTargetPlatform == TargetPlatform.iOS)
           ? (0.45 * playbackSpeed).clamp(0.3, 0.7)
@@ -229,6 +234,32 @@ class FlickController extends ChangeNotifier {
       _ttsConfigured = true;
     } catch (e, st) {
       debugPrint('Flick TTS configure failed: $e\n$st');
+    }
+  }
+
+  Future<void> _preferNaturalVoice() async {
+    try {
+      final raw = await _tts.getVoices;
+      if (raw is! List) return;
+      final voices = <Map<String, String>>[];
+      for (final item in raw) {
+        if (item is! Map) continue;
+        voices.add({
+          for (final entry in item.entries)
+            entry.key.toString(): entry.value.toString(),
+        });
+      }
+      final picked = pickSpokenVoice(voices);
+      if (picked == null) return;
+      _ttsVoice = picked.toTtsVoice();
+      listenVoiceLabel = picked.name;
+      listenVoiceIsBasic = !picked.natural;
+      await _tts.setVoice(_ttsVoice!);
+      debugPrint(
+        'Flick TTS voice: ${picked.name} natural=${picked.natural} id=${picked.identifier}',
+      );
+    } catch (e, st) {
+      debugPrint('Flick TTS voice selection failed: $e\n$st');
     }
   }
 
@@ -765,6 +796,9 @@ class FlickController extends ChangeNotifier {
         await _tts.setSpeechRate((0.45 * playbackSpeed).clamp(0.3, 0.7));
       } else {
         await _tts.setSpeechRate(0.45 * playbackSpeed);
+      }
+      if (_ttsVoice != null) {
+        await _tts.setVoice(_ttsVoice!);
       }
       if (fromWordIndex <= 0) {
         karaokeWord = -1;

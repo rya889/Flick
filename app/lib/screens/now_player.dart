@@ -274,10 +274,21 @@ class _ChromeBar extends StatelessWidget {
                 tooltip: c.muted ? 'Unmute / Listen' : 'Mute',
                 onPressed: () async {
                   final ok = await c.toggleMute();
-                  if (!ok && context.mounted) {
+                  if (!context.mounted) return;
+                  if (!ok) {
                     await showPaywallSheet(
                       context,
                       reason: PaywallReason.listenCap,
+                    );
+                    return;
+                  }
+                  if (!c.muted && c.listenVoiceIsBasic) {
+                    ScaffoldMessenger.of(context).showSnackBar(
+                      const SnackBar(
+                        content: Text(
+                          'This is the basic iPhone voice. For a natural one: Settings → Accessibility → Spoken Content → Voices → English, download Premium (Ava or Zoe), then turn Listen off and on.',
+                        ),
+                      ),
                     );
                   }
                 },
