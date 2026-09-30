@@ -52,9 +52,17 @@ class _EbookReaderScreenState extends State<EbookReaderScreen> {
     super.dispose();
   }
 
+  DateTime _lastSpokenAt = DateTime.fromMillisecondsSinceEpoch(0);
+
   void _onController() {
     final c = _controller;
     if (c == null || !mounted || !_followPlaying) return;
+    if (!c.muted &&
+        c.readerSpokenWord >= 0 &&
+        c.readerSpokenWord != _followWord) {
+      _lastSpokenAt = DateTime.now();
+      setState(() => _followWord = c.readerSpokenWord);
+    }
     if (!c.readerFollowAlong || c.muted || !c.listening) return;
     if (c.readerPageFinishedGen == _heardFinish) return;
     if (c.readerPageFinishedGen != _armedGen) return;
@@ -210,29 +218,29 @@ class _EbookReaderScreenState extends State<EbookReaderScreen> {
     final c = _controller;
     if (c == null || _pages.isEmpty || !_followPlaying) return;
     final page = _pages[_pageIndex.clamp(0, _pages.length - 1)];
+    final words = page.text.split(RegExp(r'\s+')).where((w) => w.isNotEmpty).toList();
+    final count = words.length;
     setState(() => _followWord = 0);
     c.readerSpokenWord = 0;
-    if (!c.muted) {
+    if (!c.muted && count > 0) {
       c.listening = true;
       c.speakReaderPage(page.text);
       _armedGen = c.readerSpeakGen;
       _heardFinish = c.readerPageFinishedGen;
-      return;
     }
-    final count = page.text
-        .split(RegExp(r'\s+'))
-        .where((w) => w.isNotEmpty)
-        .length;
     if (count == 0) return;
     final ms = (420 / c.playbackSpeed).round().clamp(100, 900);
     _followTimer = Timer.periodic(Duration(milliseconds: ms), (timer) {
-      if (!mounted || !_followPlaying || c.readerFollowAlong == false) {
+      if (!mounted || !_followPlaying || !c.readerFollowAlong) {
         timer.cancel();
+        return;
+      }
+      if (DateTime.now().difference(_lastSpokenAt).inMilliseconds < 700) {
         return;
       }
       if (_followWord >= count - 1) {
         timer.cancel();
-        _goRelative(1);
+        if (c.muted) _goRelative(1);
         return;
       }
       setState(() => _followWord += 1);
@@ -335,9 +343,7 @@ class _EbookReaderScreenState extends State<EbookReaderScreen> {
         ? null
         : _pages[_pageIndex.clamp(0, _pages.length - 1)];
     final fraction = _pages.length <= 1 ? 0.0 : _pageIndex / (_pages.length - 1);
-    final activeWord = _followPlaying && c.readerFollowAlong
-        ? (!c.muted && c.listening ? c.readerSpokenWord : _followWord)
-        : -1;
+    final activeWord = _followPlaying && c.readerFollowAlong ? _followWord : -1;
 
     return Scaffold(
       backgroundColor: paper.background,

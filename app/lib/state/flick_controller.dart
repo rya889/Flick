@@ -306,7 +306,10 @@ class FlickController extends ChangeNotifier {
     queueIndex = resume.clamp(0, max(0, queue.length - 1));
     await _store.setLastBookId(book.id);
     tabIndex = 0;
-    playing = true;
+    playing = false;
+    _readerUtterance = false;
+    _karaokeTimer?.cancel();
+    unawaited(_tts.stop());
     _resetKaraoke();
     notifyListeners();
     unawaited(ensureAiTldrForCurrent());
@@ -367,6 +370,12 @@ class FlickController extends ChangeNotifier {
   void setTab(int index) {
     if (index == 2) index = 0;
     tabIndex = index;
+    if (index != 0) {
+      playing = false;
+      _readerUtterance = false;
+      _karaokeTimer?.cancel();
+      unawaited(_tts.stop());
+    }
     notifyListeners();
   }
 
@@ -625,7 +634,9 @@ class FlickController extends ChangeNotifier {
 
   void endReaderSession(String bookId) {
     readerOpen = false;
+    _readerSpeakGen += 1;
     _readerUtterance = false;
+    readerSpokenWord = -1;
     unawaited(_tts.stop());
     final prog = progress[bookId];
     if (prog != null && activeBook?.id == bookId && queue.isNotEmpty) {
