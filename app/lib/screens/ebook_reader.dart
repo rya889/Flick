@@ -7,6 +7,7 @@ import 'package:provider/provider.dart';
 import '../models/models.dart';
 import '../models/reader_sync.dart';
 import '../services/book_pages.dart';
+import '../services/page_text.dart';
 import '../services/progress_bridge.dart';
 import '../state/flick_controller.dart';
 
@@ -262,6 +263,15 @@ class _EbookReaderScreenState extends State<EbookReaderScreen> {
     await c.setReaderFollowAlong(true);
     if (c.muted) await c.toggleMute();
     if (!mounted) return;
+    if (c.listenVoiceIsBasic) {
+      ScaffoldMessenger.of(context).showSnackBar(
+        const SnackBar(
+          content: Text(
+            'Basic voice. Settings → Accessibility → Spoken Content → Voices → English → download Premium (Ava or Zoe), then tap Listen again.',
+          ),
+        ),
+      );
+    }
     setState(() => _followPlaying = true);
     _startFollow();
   }
@@ -424,14 +434,6 @@ class _EbookReaderScreenState extends State<EbookReaderScreen> {
             overflow: TextOverflow.ellipsis,
             style: TextStyle(color: paper.ink, fontWeight: FontWeight.w600),
           ),
-          if (c.listenVoiceIsBasic && (_followPlaying || !c.muted))
-            const Padding(
-              padding: EdgeInsets.only(left: 4, right: 12, bottom: 2),
-              child: Text(
-                'Basic voice. For a natural one: Settings → Accessibility → Spoken Content → Voices → English → download Premium (Ava or Zoe), then tap Listen again.',
-                style: TextStyle(fontSize: 12),
-              ),
-            ),
           Row(
         children: [
           IconButton(
@@ -459,6 +461,29 @@ class _EbookReaderScreenState extends State<EbookReaderScreen> {
                     icon: Icon(
                       c.muted ? Icons.volume_off : Icons.volume_up,
                       color: paper.ink,
+                    ),
+                  ),
+                  PopupMenuButton<double>(
+                    tooltip: 'Speed',
+                    initialValue: c.playbackSpeed,
+                    onSelected: (speed) async {
+                      await c.setPlaybackSpeed(speed);
+                      if (_followPlaying) _startFollow();
+                    },
+                    itemBuilder: (context) => [
+                      for (final speed in const [0.75, 1.0, 1.25, 1.5, 2.0])
+                        CheckedPopupMenuItem(
+                          value: speed,
+                          checked: (c.playbackSpeed - speed).abs() < 0.01,
+                          child: Text('${speed}x'),
+                        ),
+                    ],
+                    child: Padding(
+                      padding: const EdgeInsets.symmetric(horizontal: 8),
+                      child: Text(
+                        '${c.playbackSpeed}x',
+                        style: TextStyle(color: paper.ink, fontWeight: FontWeight.w600),
+                      ),
                     ),
                   ),
                   IconButton(
@@ -531,27 +556,35 @@ class _PageText extends StatelessWidget {
 
   @override
   Widget build(BuildContext context) {
-    if (activeWord < 0) {
+    final blocks = pageBlocks(text);
+    if (blocks.isEmpty) {
       return Text(text, style: style);
     }
-    final words = text.split(RegExp(r'\s+')).where((w) => w.isNotEmpty).toList();
-    return Text.rich(
-      TextSpan(
-        children: [
-          for (var i = 0; i < words.length; i++) ...[
-            TextSpan(
-              text: words[i],
-              style: i == activeWord
-                  ? style.copyWith(
-                      backgroundColor: highlight,
-                      fontWeight: FontWeight.w700,
-                    )
-                  : style,
-            ),
-            if (i != words.length - 1) const TextSpan(text: ' '),
-          ],
-        ],
-      ),
+    final children = <Widget>[];
+    var wordIndex = 0;
+    for (var b = 0; b < blocks.length; b++) {
+      final block = blocks[b];
+      final spans = <InlineSpan>[];
+      for (var i = 0; i < block.words.length; i++) {
+        if (i > 0) spans.add(const TextSpan(text: ' '));
+        spans.add(
+          TextSpan(
+            text: block.words[i],
+            style: wordIndex + i == activeWord
+                ? style.copyWith(backgroundColor: highlight)
+                : style,
+          ),
+        );
+      }
+      children.add(Text.rich(TextSpan(children: spans)));
+      wordIndex += block.words.length;
+      if (b != blocks.length - 1) {
+        children.add(const SizedBox(height: 18));
+      }
+    }
+    return Column(
+      crossAxisAlignment: CrossAxisAlignment.start,
+      children: children,
     );
   }
 }

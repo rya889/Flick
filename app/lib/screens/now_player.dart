@@ -51,12 +51,34 @@ class _NowPlayerState extends State<NowPlayer> {
 
     final item = c.current;
     if (item == null) {
-      return const Center(
+      return Center(
         child: Padding(
-          padding: EdgeInsets.all(24),
-          child: Text(
-            'Add a book in Library to start reading.',
-            textAlign: TextAlign.center,
+          padding: const EdgeInsets.all(28),
+          child: Column(
+            mainAxisAlignment: MainAxisAlignment.center,
+            children: [
+              Icon(
+                Icons.auto_stories_outlined,
+                size: 48,
+                color: Theme.of(context).colorScheme.primary,
+              ),
+              const SizedBox(height: 16),
+              Text(
+                'Nothing open',
+                style: Theme.of(context).textTheme.headlineSmall,
+              ),
+              const SizedBox(height: 8),
+              Text(
+                'Open a book from Library. Read it page by page, or flick through it here.',
+                textAlign: TextAlign.center,
+                style: Theme.of(context).textTheme.bodyLarge,
+              ),
+              const SizedBox(height: 20),
+              FilledButton(
+                onPressed: () => c.setTab(1),
+                child: const Text('Go to Library'),
+              ),
+            ],
           ),
         ),
       );
@@ -74,11 +96,28 @@ class _NowPlayerState extends State<NowPlayer> {
             children: [
               Row(
                 children: [
-                  Text(
-                    'Flick',
-                    style: Theme.of(context).textTheme.headlineSmall,
+                  Expanded(
+                    child: Column(
+                      crossAxisAlignment: CrossAxisAlignment.start,
+                      children: [
+                        Text(
+                          item.book.title,
+                          maxLines: 1,
+                          overflow: TextOverflow.ellipsis,
+                          style: Theme.of(context).textTheme.headlineSmall,
+                        ),
+                        Text(
+                          c.playing ? 'Playing' : 'Paused · tap the page to play',
+                          style: Theme.of(context).textTheme.bodyMedium,
+                        ),
+                      ],
+                    ),
                   ),
-                  const Spacer(),
+                  IconButton(
+                    tooltip: c.playing ? 'Pause' : 'Play',
+                    onPressed: c.togglePlay,
+                    icon: Icon(c.playing ? Icons.pause_circle : Icons.play_circle),
+                  ),
                 ],
               ),
               const SizedBox(height: 10),
@@ -150,25 +189,27 @@ class _NowPlayerState extends State<NowPlayer> {
                       child: Column(
                         children: [
                           const SizedBox(height: 8),
-                          Text(
-                            feed.book.title,
-                            style: Theme.of(context)
-                                .textTheme
-                                .labelLarge
-                                ?.copyWith(
-                                  color:
-                                      Theme.of(context).colorScheme.primary,
-                                ),
-                          ),
-                          const SizedBox(height: 16),
                           Expanded(
                             child: Center(
-                              child: SingleChildScrollView(
-                                child: KaraokeText(
-                                  text: text,
-                                  activeIndex: active
-                                      ? c.karaokeWord
-                                      : wordsOf(text).length,
+                              child: DecoratedBox(
+                                decoration: BoxDecoration(
+                                  color: Theme.of(context).colorScheme.surface,
+                                  borderRadius: BorderRadius.circular(20),
+                                  border: Border.all(
+                                    color: Theme.of(context)
+                                        .colorScheme
+                                        .onSurface
+                                        .withValues(alpha: 0.08),
+                                  ),
+                                ),
+                                child: SingleChildScrollView(
+                                  padding: const EdgeInsets.fromLTRB(20, 22, 20, 22),
+                                  child: KaraokeText(
+                                    text: text,
+                                    activeIndex: active
+                                        ? c.karaokeWord
+                                        : wordsOf(text).length,
+                                  ),
                                 ),
                               ),
                             ),

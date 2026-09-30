@@ -93,7 +93,7 @@ class _LibraryScreenState extends State<LibraryScreen> {
                       _SampleTile(sample: sample),
                     const SizedBox(height: 20),
                     Text(
-                      'Your books',
+                      'On your shelf',
                       style: Theme.of(context).textTheme.titleMedium,
                     ),
                     const SizedBox(height: 8),
@@ -428,35 +428,60 @@ class _BookTile extends StatelessWidget {
   Widget build(BuildContext context) {
     final c = context.watch<FlickController>();
     final prog = c.progress[book.id];
-    final shorts = c.shortsByBook[book.id]?.length ?? book.shortCount;
-    return ListTile(
-      contentPadding: EdgeInsets.zero,
-      leading: _Cover(hue: book.coverHue),
-      title: Text(book.title),
-      subtitle: Text(
-        [
-          if (book.author != null) book.author!,
-          book.source.name.toUpperCase(),
-          '$shorts shorts',
-          if (prog != null) 'Resume #${prog.shortIndex + 1}',
-          if (c.readerLocations.containsKey(book.id)) 'In the reader',
-        ].join(' · '),
-      ),
-      trailing: IconButton(
-        tooltip: 'Read',
-        onPressed: () {
-          Navigator.of(context).push(
-            MaterialPageRoute<void>(
-              builder: (_) => EbookReaderScreen(book: book),
+    return Padding(
+      padding: const EdgeInsets.only(bottom: 12),
+      child: Material(
+        color: Theme.of(context).colorScheme.surface,
+        shape: RoundedRectangleBorder(
+          borderRadius: BorderRadius.circular(16),
+          side: BorderSide(
+            color: Theme.of(context).colorScheme.onSurface.withValues(alpha: 0.08),
+          ),
+        ),
+        child: InkWell(
+          borderRadius: BorderRadius.circular(16),
+          onTap: () {
+            Navigator.of(context).push(
+              MaterialPageRoute<void>(
+                builder: (_) => EbookReaderScreen(book: book),
+              ),
+            );
+          },
+          child: Padding(
+            padding: const EdgeInsets.all(12),
+            child: Row(
+              children: [
+                _Cover(hue: book.coverHue),
+                const SizedBox(width: 12),
+                Expanded(
+                  child: Column(
+                    crossAxisAlignment: CrossAxisAlignment.start,
+                    children: [
+                      Text(book.title, maxLines: 2, overflow: TextOverflow.ellipsis),
+                      const SizedBox(height: 4),
+                      Text(
+                        [
+                          if (book.author != null) book.author!,
+                          book.source.name.toUpperCase(),
+                          if (prog != null) 'Flick #${prog.shortIndex + 1}',
+                        ].join(' · '),
+                        style: Theme.of(context).textTheme.bodyMedium,
+                      ),
+                    ],
+                  ),
+                ),
+                IconButton(
+                  tooltip: 'Flick through shorts',
+                  onPressed: () async {
+                    await c.openBook(book);
+                  },
+                  icon: const Icon(Icons.play_circle_outline),
+                ),
+              ],
             ),
-          );
-        },
-        icon: const Icon(Icons.auto_stories_outlined),
+          ),
+        ),
       ),
-      onTap: () async {
-        await c.openBook(book);
-        c.setTab(0);
-      },
     );
   }
 }
