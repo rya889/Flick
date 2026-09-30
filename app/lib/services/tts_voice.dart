@@ -75,16 +75,25 @@ int _score(SpokenVoice voice) {
           : 6;
   final id = (voice.identifier ?? '').toLowerCase();
   final name = voice.name.toLowerCase();
-  if (voice.rank >= 3) {
-    score += 100;
+  final siri = id.contains('siri') || name.contains('siri');
+  // Premium names are listed even when that audio is not downloaded.
+  // iOS then substitutes the compact voice, which sounds robotic.
+  if (siri) {
+    score += 120;
   } else if (voice.rank == 2) {
-    score += 70;
+    score += 100;
+  } else if (voice.rank >= 3) {
+    score += 40;
   } else {
     score += 5;
   }
-  const preferred = ['ava', 'zoe', 'allison', 'nicky', 'nathan', 'samantha'];
+  const preferred = ['ava', 'zoe', 'allison', 'nicky', 'nathan'];
   for (final token in preferred) {
     if (name.contains(token) || id.contains(token)) score += 6;
   }
   return score;
 }
+
+SpokenVoice spokenVoiceFromMap(Map<String, String> raw) => _normalize(raw);
+
+int spokenVoiceSortScore(SpokenVoice voice) => _score(voice);

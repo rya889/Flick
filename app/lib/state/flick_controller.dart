@@ -89,6 +89,7 @@ class FlickController extends ChangeNotifier {
   Map<String, String>? _ttsVoice;
   String? listenVoiceLabel;
   bool listenVoiceIsBasic = true;
+  List<SpokenVoice> listenVoices = const [];
 
   PlusService get plusService => _plus;
 
@@ -260,17 +261,35 @@ class FlickController extends ChangeNotifier {
         });
       }
       final picked = pickSpokenVoice(voices);
+      listenVoices = [
+        for (final voice in voices) spokenVoiceFromMap(voice),
+      ].where((voice) => voice.locale.toLowerCase().startsWith('en')).toList()
+        ..sort(
+          (a, b) => spokenVoiceSortScore(b).compareTo(spokenVoiceSortScore(a)),
+        );
       if (picked == null) return;
-      _ttsVoice = picked.toTtsVoice();
-      listenVoiceLabel = picked.name;
-      listenVoiceIsBasic = !picked.natural;
-      await _tts.setVoice(_ttsVoice!);
-      debugPrint(
-        'Flick TTS voice: ${picked.name} natural=${picked.natural} id=${picked.identifier}',
-      );
+      await _applySpokenVoice(picked);
     } catch (e, st) {
       debugPrint('Flick TTS voice selection failed: $e\n$st');
     }
+  }
+
+  Future<void> _applySpokenVoice(SpokenVoice picked) async {
+    _ttsVoice = picked.toTtsVoice();
+    listenVoiceLabel = picked.natural ? picked.name : '${picked.name} · basic';
+    listenVoiceIsBasic = !picked.natural;
+    await _tts.setVoice(_ttsVoice!);
+    debugPrint(
+      'Flick TTS voice: ${picked.name} natural=${picked.natural} id=${picked.identifier}',
+    );
+  }
+
+  Future<void> prepareListenVoices() => _configureTts();
+
+  Future<void> useListenVoice(SpokenVoice voice) async {
+    await _configureTts();
+    await _applySpokenVoice(voice);
+    notifyListeners();
   }
 
   Future<void> seedSamples() async {
@@ -897,7 +916,7 @@ class FlickController extends ChangeNotifier {
           ],
           IosTextToSpeechAudioMode.spokenAudio,
         );
-        await _tts.setSpeechRate((0.45 * playbackSpeed).clamp(0.3, 0.7));
+        await _tts.setSpeechRate((0.5 * playbackSpeed).clamp(0.35, 0.65));
       } else {
         await _tts.setSpeechRate(0.45 * playbackSpeed);
       }

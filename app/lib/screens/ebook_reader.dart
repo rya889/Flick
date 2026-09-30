@@ -9,6 +9,7 @@ import '../models/reader_sync.dart';
 import '../services/book_pages.dart';
 import '../services/page_text.dart';
 import '../services/progress_bridge.dart';
+import '../services/tts_voice.dart';
 import '../state/flick_controller.dart';
 
 class EbookReaderScreen extends StatefulWidget {
@@ -317,6 +318,43 @@ class _EbookReaderScreenState extends State<EbookReaderScreen> {
     if (fit != null && mounted) await _layoutFor(fit);
   }
 
+  Future<void> _pickVoice(FlickController c) async {
+    await c.prepareListenVoices();
+    if (!mounted) return;
+    final picked = await showModalBottomSheet<SpokenVoice>(
+      context: context,
+      builder: (context) {
+        return SafeArea(
+          child: ListView(
+            children: [
+              const ListTile(
+                title: Text('Voice'),
+                subtitle: Text(
+                  'Siri and Enhanced are the natural on-device voices. Premium only sounds natural after it is downloaded in Settings → Accessibility → Spoken Content → Voices.',
+                ),
+              ),
+              for (final voice in c.listenVoices)
+                ListTile(
+                  title: Text(voice.name),
+                  subtitle: Text(
+                    voice.natural ? voice.locale : '${voice.locale} · basic',
+                  ),
+                  trailing: voice.name == c.listenVoiceLabel ||
+                          '${voice.name} · basic' == c.listenVoiceLabel
+                      ? const Icon(Icons.check)
+                      : null,
+                  onTap: () => Navigator.pop(context, voice),
+                ),
+            ],
+          ),
+        );
+      },
+    );
+    if (picked == null) return;
+    await c.useListenVoice(picked);
+    if (_followPlaying) _startFollow();
+  }
+
   Future<void> _showChapters() async {
     if (_chapters.isEmpty) return;
     final picked = await showModalBottomSheet<int>(
@@ -461,6 +499,13 @@ class _EbookReaderScreenState extends State<EbookReaderScreen> {
                     icon: Icon(
                       c.muted ? Icons.volume_off : Icons.volume_up,
                       color: paper.ink,
+                    ),
+                  ),
+                  TextButton(
+                    onPressed: () => _pickVoice(c),
+                    child: Text(
+                      c.listenVoiceLabel ?? 'Voice',
+                      style: TextStyle(color: paper.ink),
                     ),
                   ),
                   PopupMenuButton<double>(

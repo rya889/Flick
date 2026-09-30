@@ -2,7 +2,7 @@ import 'package:flick/services/tts_voice.dart';
 import 'package:flutter_test/flutter_test.dart';
 
 void main() {
-  test('pickSpokenVoice prefers premium English over compact', () {
+  test('enhanced voice is chosen over an undownloaded premium voice', () {
     final picked = pickSpokenVoice(const [
       {
         'name': 'Samantha',
@@ -14,7 +14,7 @@ void main() {
         'name': 'Ava',
         'locale': 'en-US',
         'identifier': 'com.apple.voice.premium.en-US.Ava',
-        'quality': '3',
+        'quality': 'premium',
       },
       {
         'name': 'Daniel',
@@ -24,9 +24,8 @@ void main() {
       },
     ]);
 
-    expect(picked?.name, 'Ava');
+    expect(picked?.name, 'Daniel');
     expect(picked?.natural, isTrue);
-    expect(picked?.toTtsVoice()['identifier'], contains('premium'));
   });
 
   test('pickSpokenVoice uses Siri before a compact voice', () {
@@ -45,5 +44,24 @@ void main() {
 
     expect(picked?.name, 'Nicky');
     expect(picked?.natural, isTrue);
+  });
+
+  test('Siri is used instead of a premium voice that may not be downloaded', () {
+    final picked = pickSpokenVoice(const [
+      {
+        'name': 'Ava',
+        'locale': 'en-US',
+        'identifier': 'com.apple.voice.premium.en-US.Ava',
+        'quality': 'premium',
+      },
+      {
+        'name': 'Nicky',
+        'locale': 'en-US',
+        'identifier': 'com.apple.ttsbundle.siri_Nicky_en-US_compact',
+        'quality': 'default',
+      },
+    ]);
+
+    expect(picked?.name, 'Nicky');
   });
 }
