@@ -24,14 +24,14 @@ See [`docs/T14-handoff.md`](../T14-handoff.md). Run on simulator after `git pull
 
 ## Next build options (pick one trunk / theme per session)
 
-Nothing is auto-scheduled after T14. **T10 stays parked** until Ryan unlocks in writing.
+**T15** (bundled seed covers) and **T16** (Pro premium Listen voices) are complete. **T10 stays parked** until Ryan unlocks in writing.
 
 | Priority | Theme | Notes |
 |----------|--------|--------|
-| A | **Bundled seed cover art** | Per T11: rights-recorded Standard Ebooks / CC0 only; wire `BookCoverMeta` overrides |
+| A | **Bundled seed cover art** | **Done (T15)** |
 | B | **Sync / backup polish** | Existing sync sheet; harden restore, errors, empty sync |
 | C | **Bounce / queue** | Algorithm and UX for multi-book bounce (large; split) |
-| D | **Premium voices in Pro** | Cloud TTS behind Pro; no new paywall surfaces |
+| D | **Premium voices in Pro** | **Done (T16)** — on-device enhanced/Siri gating |
 | E | **Phase 1.5 rewarded voice trial** | Optional listen trial; see pricing research |
 | F | **T10 ads Phase 2** | **Blocked** — native shorts + Finish interstitial |
 

@@ -64,4 +64,23 @@ void main() {
 
     expect(picked?.name, 'Nicky');
   });
+
+  test('free tier avoids premium and enhanced voices', () {
+    final picked = pickSpokenVoice(const [
+      {
+        'name': 'Daniel',
+        'locale': 'en-GB',
+        'identifier': 'com.apple.voice.enhanced.en-GB.Daniel',
+        'quality': 'enhanced',
+      },
+      {
+        'name': 'Samantha',
+        'locale': 'en-US',
+        'identifier': 'com.apple.voice.compact.en-US.Samantha',
+      },
+    ], allowPremiumVoices: false);
+
+    expect(picked?.name, 'Samantha');
+    expect(picked?.isPremiumTier, isFalse);
+  });
 }

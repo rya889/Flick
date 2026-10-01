@@ -29,7 +29,7 @@ Future<void> showHouseProPrompt(
     HouseProPlacement.settings =>
       'Pro is \$4.99/mo or \$29.99/yr. Voices and ad-free Listen included; chapters are never paywalled.',
     HouseProPlacement.voiceTease =>
-      'Download a premium English voice in iOS Settings, or unlock Pro when cloud voices ship.',
+      'Pro unlocks enhanced and Siri-class on-device Listen voices. Public-domain text stays free to read.',
   };
 
   final rootContext = Navigator.of(context, rootNavigator: true).context;

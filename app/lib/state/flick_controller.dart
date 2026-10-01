@@ -298,12 +298,21 @@ class FlickController extends ChangeNotifier {
             entry.key.toString(): entry.value.toString(),
         });
       }
-      final picked = pickSpokenVoice(voices);
+      final allowPremium = plusActive;
+      final picked = pickSpokenVoice(
+        voices,
+        allowPremiumVoices: allowPremium,
+      );
       listenVoices = [
         for (final voice in voices) spokenVoiceFromMap(voice),
       ].where((voice) => voice.locale.toLowerCase().startsWith('en')).toList()
         ..sort(
-          (a, b) => spokenVoiceSortScore(b).compareTo(spokenVoiceSortScore(a)),
+          (a, b) => spokenVoiceSortScore(
+            b,
+            allowPremiumVoices: allowPremium,
+          ).compareTo(
+            spokenVoiceSortScore(a, allowPremiumVoices: allowPremium),
+          ),
         );
       if (picked == null) return;
       await _applySpokenVoice(picked);
@@ -324,9 +333,18 @@ class FlickController extends ChangeNotifier {
 
   Future<void> prepareListenVoices() => _configureTts();
 
+  bool canSelectListenVoice(SpokenVoice voice) =>
+      plusActive || !voice.isPremiumTier;
+
   Future<void> useListenVoice(SpokenVoice voice) async {
+    if (!canSelectListenVoice(voice)) return;
     await _configureTts();
     await _applySpokenVoice(voice);
+    notifyListeners();
+  }
+
+  Future<void> refreshListenVoiceForProStatus() async {
+    await _configureTts();
     notifyListeners();
   }
 
@@ -1107,6 +1125,7 @@ class FlickController extends ChangeNotifier {
     if (plusActive) {
       unawaited(ensureAiTldrForCurrent());
     }
+    unawaited(refreshListenVoiceForProStatus());
   }
 
   Future<bool> purchasePremium() async {
@@ -1114,6 +1133,7 @@ class FlickController extends ChangeNotifier {
     plusActive = _plus.plusActive;
     await _store.setPlusDemo(_plus.demoActive);
     notifyListeners();
+    unawaited(refreshListenVoiceForProStatus());
     return ok;
   }
 
@@ -1123,6 +1143,7 @@ class FlickController extends ChangeNotifier {
     await _store.setPlusDemo(_plus.demoActive);
     notifyListeners();
     if (plusActive) unawaited(ensureAiTldrForCurrent());
+    unawaited(refreshListenVoiceForProStatus());
     return ok;
   }
 
@@ -1132,6 +1153,7 @@ class FlickController extends ChangeNotifier {
     await _store.setPlusDemo(_plus.demoActive);
     notifyListeners();
     if (plusActive) unawaited(ensureAiTldrForCurrent());
+    unawaited(refreshListenVoiceForProStatus());
     return ok;
   }
 
@@ -1140,6 +1162,7 @@ class FlickController extends ChangeNotifier {
     plusActive = _plus.plusActive;
     notifyListeners();
     if (plusActive) unawaited(ensureAiTldrForCurrent());
+    unawaited(refreshListenVoiceForProStatus());
     return ok;
   }
 

@@ -11,6 +11,7 @@ import '../services/page_text.dart';
 import '../services/progress_bridge.dart';
 import '../services/tts_voice.dart';
 import '../state/flick_controller.dart';
+import 'house_pro_prompt.dart';
 
 class EbookReaderScreen extends StatefulWidget {
   const EbookReaderScreen({super.key, required this.book});
@@ -327,23 +328,43 @@ class _EbookReaderScreenState extends State<EbookReaderScreen> {
         return SafeArea(
           child: ListView(
             children: [
-              const ListTile(
-                title: Text('Voice'),
+              ListTile(
+                title: const Text('Voice'),
                 subtitle: Text(
-                  'Siri and Enhanced are the natural on-device voices. Premium only sounds natural after it is downloaded in Settings → Accessibility → Spoken Content → Voices.',
+                  c.plusActive
+                      ? 'Pro: enhanced and Siri-class voices when installed on this device.'
+                      : 'Free tier uses basic voices. Pro unlocks enhanced Listen voices.',
                 ),
               ),
               for (final voice in c.listenVoices)
                 ListTile(
                   title: Text(voice.name),
                   subtitle: Text(
-                    voice.natural ? voice.locale : '${voice.locale} · basic',
+                    voice.isPremiumTier && !c.plusActive
+                        ? '${voice.locale} · Pro'
+                        : voice.natural
+                            ? voice.locale
+                            : '${voice.locale} · basic',
                   ),
                   trailing: voice.name == c.listenVoiceLabel ||
                           '${voice.name} · basic' == c.listenVoiceLabel
                       ? const Icon(Icons.check)
-                      : null,
-                  onTap: () => Navigator.pop(context, voice),
+                      : voice.isPremiumTier && !c.plusActive
+                          ? const Icon(Icons.lock_outline)
+                          : null,
+                  onTap: () async {
+                    if (!c.canSelectListenVoice(voice)) {
+                      Navigator.pop(context);
+                      if (context.mounted) {
+                        await showHouseProPrompt(
+                          context,
+                          placement: HouseProPlacement.voiceTease,
+                        );
+                      }
+                      return;
+                    }
+                    Navigator.pop(context, voice);
+                  },
                 ),
             ],
           ),

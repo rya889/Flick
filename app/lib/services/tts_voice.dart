@@ -13,6 +13,9 @@ class SpokenVoice {
   final bool natural;
   final int rank;
 
+  /// Enhanced / Siri-class voices (Pro perk on device).
+  bool get isPremiumTier => natural && rank >= 2;
+
   Map<String, String> toTtsVoice() {
     return {
       'name': name,
@@ -23,12 +26,19 @@ class SpokenVoice {
 }
 
 /// Prefer a natural English voice already installed on the device.
-SpokenVoice? pickSpokenVoice(Iterable<Map<String, String>> voices) {
+///
+/// When [allowPremiumVoices] is false (free tier), only compact/basic voices
+/// are considered so Listen stays on-device without Pro-enhanced picks.
+SpokenVoice? pickSpokenVoice(
+  Iterable<Map<String, String>> voices, {
+  bool allowPremiumVoices = true,
+}) {
   SpokenVoice? best;
   var bestScore = 0;
   for (final raw in voices) {
     final voice = _normalize(raw);
-    final score = _score(voice);
+    if (!allowPremiumVoices && voice.isPremiumTier) continue;
+    final score = _score(voice, allowPremiumVoices: allowPremiumVoices);
     if (score > bestScore) {
       bestScore = score;
       best = voice;
@@ -65,7 +75,7 @@ int _qualityRank(String quality, String id) {
   return 1;
 }
 
-int _score(SpokenVoice voice) {
+int _score(SpokenVoice voice, {required bool allowPremiumVoices}) {
   final locale = voice.locale.toLowerCase();
   if (!locale.startsWith('en')) return 0;
   var score = locale.startsWith('en-us')
@@ -76,7 +86,16 @@ int _score(SpokenVoice voice) {
   final id = (voice.identifier ?? '').toLowerCase();
   final name = voice.name.toLowerCase();
   final siri = id.contains('siri') || name.contains('siri');
-  // Premium names are listed even when that audio is not downloaded.
+  if (!allowPremiumVoices) {
+    if (siri || voice.rank >= 2) return 0;
+    score += 8;
+    const preferredBasic = ['samantha', 'karen', 'daniel', 'arthur'];
+    for (final token in preferredBasic) {
+      if (name.contains(token) || id.contains(token)) score += 4;
+    }
+    return score;
+  }
+  // Premium voices are listed even when that audio is not downloaded.
   // iOS then substitutes the compact voice, which sounds robotic.
   if (siri) {
     score += 120;
@@ -96,4 +115,5 @@ int _score(SpokenVoice voice) {
 
 SpokenVoice spokenVoiceFromMap(Map<String, String> raw) => _normalize(raw);
 
-int spokenVoiceSortScore(SpokenVoice voice) => _score(voice);
+int spokenVoiceSortScore(SpokenVoice voice, {bool allowPremiumVoices = true}) =>
+    _score(voice, allowPremiumVoices: allowPremiumVoices);

@@ -332,11 +332,18 @@ class _ChromeBar extends StatelessWidget {
                     );
                     return;
                   }
-                  if (!c.muted && c.listenVoiceIsBasic) {
+                  if (!c.muted && c.listenVoiceIsBasic && !c.plusActive) {
                     ScaffoldMessenger.of(context).showSnackBar(
-                      const SnackBar(
-                        content: Text(
-                          'Basic voice — download a premium voice in iOS Settings → Spoken Content, or try Pro later.',
+                      SnackBar(
+                        content: const Text(
+                          'Basic Listen voice on free tier. Pro unlocks enhanced on-device voices.',
+                        ),
+                        action: SnackBarAction(
+                          label: 'Pro',
+                          onPressed: () => showHouseProPrompt(
+                            context,
+                            placement: HouseProPlacement.voiceTease,
+                          ),
                         ),
                       ),
                     );
