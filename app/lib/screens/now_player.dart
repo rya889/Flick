@@ -392,7 +392,7 @@ class _BounceSoftPrompt extends StatelessWidget {
               await c.seedSamples();
               c.enterBounce();
             },
-            child: const Text('Add sample library'),
+            child: const Text('Add public-domain samples'),
           ),
           const SizedBox(height: 12),
           OutlinedButton(

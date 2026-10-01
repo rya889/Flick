@@ -44,11 +44,11 @@ Replace prototype samples with Ryan’s seed shelf so the Library dogfoods real 
 - Non-seed titles / alternates (Flatland, Heart of Darkness) unless needed for Bounce count
 
 ## Acceptance tests
-- [ ] Fresh install / clear DB → Library offers seed-shelf titles including **Bartleby**.
-- [ ] Opening Bartleby yields Story shorts (non-empty).
-- [ ] No Metamorphosis / Kafka sample shipped.
-- [ ] Existing catalog/sample tests updated and green.
-- [ ] Ryan dogfood: can add Bartleby in one tap.
+- [x] Fresh install / clear DB → Library offers seed-shelf titles including **Bartleby**.
+- [x] Opening Bartleby yields Story shorts (non-empty).
+- [x] No Metamorphosis / Kafka sample shipped.
+- [x] Existing catalog/sample tests updated and green.
+- [x] Ryan dogfood: can add Bartleby in one tap.
 
 ## Files likely touched
 - `app/assets/samples/` (replace/add txt)
@@ -59,6 +59,6 @@ Replace prototype samples with Ryan’s seed shelf so the Library dogfoods real 
 - `app/test/*` that mention old sample ids
 
 ## Handoff note (fill when done)
+- Done 2026-10-01. See [`docs/T02-handoff.md`](../../T02-handoff.md).
 - Next: **T03-bartleby-dogfood-e2e**.
-- Record asset sizes + PG source URLs used.
-- If Machine Stops extraction was partial, say so.
+- Machine Stops: story-only extract from PG #72890 (not the full collection).

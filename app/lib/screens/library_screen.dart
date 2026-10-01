@@ -379,7 +379,7 @@ class _EmptyLibrary extends StatelessWidget {
             const SizedBox(height: 12),
             OutlinedButton(
               onPressed: onAddSamples,
-              child: const Text('Add sample library'),
+              child: const Text('Add public-domain samples'),
             ),
           ],
         ),

@@ -212,27 +212,41 @@ class SampleMeta {
   final double hue;
 }
 
+/// Public-domain seed shelf (Gutenberg US). See docs/plan/seed-shelf-2026-10-01.md.
 const sampleLibrary = [
   SampleMeta(
-    id: 'sample-alice',
-    title: 'Alice in Wonderland',
-    author: 'Lewis Carroll',
-    assetPath: 'assets/samples/alice.txt',
-    hue: 32,
+    id: 'sample-bartleby',
+    title: 'Bartleby, the Scrivener',
+    author: 'Herman Melville',
+    assetPath: 'assets/samples/bartleby.txt',
+    hue: 220,
   ),
   SampleMeta(
-    id: 'sample-holmes',
-    title: 'A Scandal in Bohemia',
-    author: 'Arthur Conan Doyle',
-    assetPath: 'assets/samples/holmes.txt',
-    hue: 210,
+    id: 'sample-machine-stops',
+    title: 'The Machine Stops',
+    author: 'E. M. Forster',
+    assetPath: 'assets/samples/machine-stops.txt',
+    hue: 185,
   ),
-  // DO NOT SHIP: Kafka/Wyllie text is not cleared. Swap this sample in T02.
   SampleMeta(
-    id: 'sample-metamorphosis',
-    title: 'The Metamorphosis',
-    author: 'Franz Kafka',
-    assetPath: 'assets/samples/metamorphosis.txt',
-    hue: 145,
+    id: 'sample-notes-underground',
+    title: 'Notes from Underground',
+    author: 'Fyodor Dostoyevsky',
+    assetPath: 'assets/samples/notes-underground.txt',
+    hue: 12,
+  ),
+  SampleMeta(
+    id: 'sample-jekyll-hyde',
+    title: 'Dr. Jekyll and Mr. Hyde',
+    author: 'Robert Louis Stevenson',
+    assetPath: 'assets/samples/jekyll-hyde.txt',
+    hue: 280,
+  ),
+  SampleMeta(
+    id: 'sample-time-machine',
+    title: 'The Time Machine',
+    author: 'H. G. Wells',
+    assetPath: 'assets/samples/time-machine.txt',
+    hue: 45,
   ),
 ];
