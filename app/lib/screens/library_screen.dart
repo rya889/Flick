@@ -64,46 +64,63 @@ class _LibraryScreenState extends State<LibraryScreen> {
         ),
         Padding(
           padding: const EdgeInsets.symmetric(horizontal: 16),
-          child: Wrap(
-            spacing: 8,
-            runSpacing: 8,
+          child: Column(
             children: [
-              FilledButton.icon(
-                onPressed: _importing ? null : () => _showAddBook(context),
-                icon: _importing
-                    ? const SizedBox(
-                        width: 16,
-                        height: 16,
-                        child: CircularProgressIndicator(strokeWidth: 2),
-                      )
-                    : const Icon(Icons.add),
-                label: Text(_importing ? 'Importing…' : 'Add book'),
-              ),
-              OutlinedButton.icon(
-                onPressed: () => _showBookmarks(context),
-                icon: const Icon(Icons.bookmark_outline),
-                label: Text('Saves (${c.saves.length})'),
-              ),
-              OutlinedButton.icon(
-                onPressed: () => showSyncSheet(context),
-                icon: const Icon(Icons.sync),
-                label: const Text('Sync'),
-              ),
-              OutlinedButton.icon(
-                onPressed: () {
-                  Navigator.of(context).push(
-                    MaterialPageRoute<void>(
-                      builder: (_) => const PdCatalogScreen(),
+              Row(
+                children: [
+                  Expanded(
+                    child: FilledButton.icon(
+                      onPressed: _importing ? null : () => _showAddBook(context),
+                      icon: _importing
+                          ? const SizedBox(
+                              width: 16,
+                              height: 16,
+                              child: CircularProgressIndicator(strokeWidth: 2),
+                            )
+                          : const Icon(Icons.add),
+                      label: Text(_importing ? 'Importing…' : 'Add book'),
                     ),
-                  );
-                },
-                icon: const Icon(Icons.public),
-                label: const Text('Browse PD'),
+                  ),
+                  const SizedBox(width: 8),
+                  Expanded(
+                    child: OutlinedButton.icon(
+                      onPressed: () => _showBookmarks(context),
+                      icon: const Icon(Icons.bookmark_outline),
+                      label: Text('Saves (${c.saves.length})'),
+                    ),
+                  ),
+                ],
+              ),
+              const SizedBox(height: 8),
+              Row(
+                children: [
+                  Expanded(
+                    child: OutlinedButton.icon(
+                      onPressed: () => showSyncSheet(context),
+                      icon: const Icon(Icons.sync),
+                      label: const Text('Sync'),
+                    ),
+                  ),
+                  const SizedBox(width: 8),
+                  Expanded(
+                    child: OutlinedButton.icon(
+                      onPressed: () {
+                        Navigator.of(context).push(
+                          MaterialPageRoute<void>(
+                            builder: (_) => const PdCatalogScreen(),
+                          ),
+                        );
+                      },
+                      icon: const Icon(Icons.public),
+                      label: const Text('Browse PD'),
+                    ),
+                  ),
+                ],
               ),
             ],
           ),
         ),
-        const SizedBox(height: 12),
+        const SizedBox(height: 10),
         Expanded(
           child: c.books.isEmpty
               ? LibraryEmptyState(
@@ -116,7 +133,8 @@ class _LibraryScreenState extends State<LibraryScreen> {
                   children: [
                     if (c.continueReadingBook != null)
                       _ContinueReadingCard(book: c.continueReadingBook!),
-                    if (c.books.any((b) => b.id == kBartlebySampleId))
+                    if (c.books.any((b) => b.id == kBartlebySampleId) &&
+                        c.continueReadingBook?.id != kBartlebySampleId)
                       _BartlebyDogfoodCard(
                         completed: c.isBookCompleted(kBartlebySampleId),
                         onStory: () async {
@@ -125,6 +143,9 @@ class _LibraryScreenState extends State<LibraryScreen> {
                           await c.openBook(book);
                         },
                       ),
+                    if (c.continueReadingBook != null ||
+                        c.books.any((b) => b.id == kBartlebySampleId))
+                      const SizedBox(height: 4),
                     Text(
                       'On your shelf',
                       style: Theme.of(context).textTheme.titleMedium,
@@ -385,6 +406,104 @@ class _LibraryScreenState extends State<LibraryScreen> {
   }
 }
 
+class _LibraryHeroCard extends StatelessWidget {
+  const _LibraryHeroCard({
+    required this.leadingWidth,
+    required this.leadingHeight,
+    required this.leading,
+    required this.title,
+    required this.subtitle,
+    this.detail,
+    required this.trailing,
+    required this.onTap,
+  });
+
+  final double leadingWidth;
+  final double leadingHeight;
+  final Widget leading;
+  final String title;
+  final String subtitle;
+  final String? detail;
+  final Widget trailing;
+  final VoidCallback onTap;
+
+  static const _coverWidth = 44.0;
+  static const _coverHeight = 60.0;
+
+  @override
+  Widget build(BuildContext context) {
+    final scheme = Theme.of(context).colorScheme;
+    final textScaler = MediaQuery.textScalerOf(context)
+        .clamp(minScaleFactor: 1, maxScaleFactor: 1.15);
+    return Padding(
+      padding: const EdgeInsets.only(bottom: 10),
+      child: Material(
+        color: scheme.primaryContainer.withValues(alpha: 0.38),
+        borderRadius: BorderRadius.circular(14),
+        child: InkWell(
+          borderRadius: BorderRadius.circular(14),
+          onTap: onTap,
+          child: Padding(
+            padding: const EdgeInsets.fromLTRB(12, 11, 10, 11),
+            child: Row(
+              crossAxisAlignment: CrossAxisAlignment.center,
+              children: [
+                SizedBox(
+                  width: leadingWidth,
+                  height: leadingHeight,
+                  child: leading,
+                ),
+                const SizedBox(width: 12),
+                Expanded(
+                  child: Column(
+                    mainAxisSize: MainAxisSize.min,
+                    crossAxisAlignment: CrossAxisAlignment.start,
+                    children: [
+                      Text(
+                        title,
+                        maxLines: 1,
+                        overflow: TextOverflow.ellipsis,
+                        textScaler: textScaler,
+                        style: Theme.of(context).textTheme.labelLarge?.copyWith(
+                              color: scheme.onSurface.withValues(alpha: 0.72),
+                              fontWeight: FontWeight.w600,
+                              letterSpacing: 0.2,
+                            ),
+                      ),
+                      const SizedBox(height: 3),
+                      Text(
+                        subtitle,
+                        maxLines: 1,
+                        overflow: TextOverflow.ellipsis,
+                        textScaler: textScaler,
+                        style: Theme.of(context).textTheme.titleSmall?.copyWith(
+                              fontWeight: FontWeight.w600,
+                            ),
+                      ),
+                      if (detail != null) ...[
+                        const SizedBox(height: 2),
+                        Text(
+                          detail!,
+                          maxLines: 1,
+                          overflow: TextOverflow.ellipsis,
+                          textScaler: textScaler,
+                          style: Theme.of(context).textTheme.bodySmall,
+                        ),
+                      ],
+                    ],
+                  ),
+                ),
+                const SizedBox(width: 4),
+                trailing,
+              ],
+            ),
+          ),
+        ),
+      ),
+    );
+  }
+}
+
 class _BartlebyDogfoodCard extends StatelessWidget {
   const _BartlebyDogfoodCard({
     required this.completed,
@@ -396,47 +515,35 @@ class _BartlebyDogfoodCard extends StatelessWidget {
 
   @override
   Widget build(BuildContext context) {
+    final bartleby = sampleLibrary.firstWhere((s) => s.id == kBartlebySampleId);
+    final book = LibraryBook(
+      id: bartleby.id,
+      title: bartleby.title,
+      author: bartleby.author,
+      source: BookSource.sample,
+      text: '',
+      addedAt: DateTime(2026),
+      coverHue: bartleby.hue,
+    );
     final scheme = Theme.of(context).colorScheme;
-    return Padding(
-      padding: const EdgeInsets.only(bottom: 16),
-      child: Material(
-        color: scheme.primaryContainer.withValues(alpha: 0.45),
-        borderRadius: BorderRadius.circular(16),
-        child: InkWell(
-          borderRadius: BorderRadius.circular(16),
-          onTap: onStory,
-          child: Padding(
-            padding: const EdgeInsets.all(16),
-            child: Row(
-              children: [
-                Expanded(
-                  child: Column(
-                    crossAxisAlignment: CrossAxisAlignment.start,
-                    children: [
-                      Text(
-                        completed ? 'Bartleby — finished' : 'Start with Bartleby',
-                        style: Theme.of(context).textTheme.titleMedium,
-                      ),
-                      const SizedBox(height: 4),
-                      Text(
-                        completed
-                            ? 'Replay Story shorts or open the full reader.'
-                            : 'One-tap Story path — swipe shorts, tap Listen, finish the book.',
-                        style: Theme.of(context).textTheme.bodyMedium,
-                      ),
-                    ],
-                  ),
-                ),
-                Icon(
-                  completed ? Icons.check_circle : Icons.play_circle_fill,
-                  color: scheme.primary,
-                  size: 40,
-                ),
-              ],
-            ),
-          ),
-        ),
+    return _LibraryHeroCard(
+      leadingWidth: _LibraryHeroCard._coverWidth,
+      leadingHeight: _LibraryHeroCard._coverHeight,
+      leading: FlickBookCover(
+        book: book,
+        width: _LibraryHeroCard._coverWidth,
+        height: _LibraryHeroCard._coverHeight,
       ),
+      title: completed ? 'Bartleby — finished' : 'Start with Bartleby',
+      subtitle: completed
+          ? 'Replay Story shorts or open the full reader.'
+          : 'One tap: Story, Listen, Finish.',
+      trailing: Icon(
+        completed ? Icons.check_circle : Icons.play_circle_fill,
+        color: scheme.primary,
+        size: 36,
+      ),
+      onTap: onStory,
     );
   }
 }
@@ -449,55 +556,27 @@ class _ContinueReadingCard extends StatelessWidget {
   Widget build(BuildContext context) {
     final c = context.watch<FlickController>();
     final chip = c.continueReadingLabel(book.id);
-    return Padding(
-      padding: const EdgeInsets.only(bottom: 16),
-      child: Material(
-        color: Theme.of(context).colorScheme.primaryContainer.withValues(alpha: 0.35),
-        borderRadius: BorderRadius.circular(16),
-        child: InkWell(
-          borderRadius: BorderRadius.circular(16),
-          onTap: () async {
-            await c.openBook(book);
-            c.setTab(0);
-          },
-          child: Padding(
-            padding: const EdgeInsets.all(12),
-            child: Row(
-              crossAxisAlignment: CrossAxisAlignment.center,
-              children: [
-                FlickBookCover(book: book, width: 52, height: 68),
-                const SizedBox(width: 10),
-                Expanded(
-                  child: Column(
-                    mainAxisSize: MainAxisSize.min,
-                    crossAxisAlignment: CrossAxisAlignment.start,
-                    children: [
-                      Text(
-                        'Continue reading',
-                        style: Theme.of(context).textTheme.labelMedium,
-                      ),
-                      Text(
-                        book.title,
-                        maxLines: 1,
-                        overflow: TextOverflow.ellipsis,
-                        style: Theme.of(context).textTheme.titleSmall,
-                      ),
-                      if (chip != null)
-                        Text(
-                          chip,
-                          maxLines: 1,
-                          overflow: TextOverflow.ellipsis,
-                          style: Theme.of(context).textTheme.bodySmall,
-                        ),
-                    ],
-                  ),
-                ),
-                const Icon(Icons.play_arrow_rounded, size: 28),
-              ],
-            ),
-          ),
-        ),
+    final scheme = Theme.of(context).colorScheme;
+    return _LibraryHeroCard(
+      leadingWidth: _LibraryHeroCard._coverWidth,
+      leadingHeight: _LibraryHeroCard._coverHeight,
+      leading: FlickBookCover(
+        book: book,
+        width: _LibraryHeroCard._coverWidth,
+        height: _LibraryHeroCard._coverHeight,
       ),
+      title: 'Continue reading',
+      subtitle: book.title,
+      detail: chip,
+      trailing: Icon(
+        Icons.play_arrow_rounded,
+        color: scheme.primary,
+        size: 32,
+      ),
+      onTap: () async {
+        await c.openBook(book);
+        c.setTab(0);
+      },
     );
   }
 }
@@ -515,7 +594,7 @@ class _ShelfCoverGrid extends StatelessWidget {
         crossAxisCount: 2,
         mainAxisSpacing: 12,
         crossAxisSpacing: 12,
-        childAspectRatio: 0.52,
+        childAspectRatio: 0.48,
       ),
       itemCount: books.length,
       itemBuilder: (context, index) => _ShelfBookCard(book: books[index]),
