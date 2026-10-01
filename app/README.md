@@ -4,6 +4,14 @@
 
 Implements Design Specs in [`../docs/`](../docs/) as a runnable Flutter prototype (Android / iOS / web).
 
+## Tests
+
+```bash
+cd app && flutter test
+```
+
+Latest baseline and vault-vs-code deltas: [`../docs/T01-handoff.md`](../docs/T01-handoff.md). **One trunk per session.**
+
 ## Run
 
 ```bash

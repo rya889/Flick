@@ -8,6 +8,9 @@ These documents are the **source of truth** for the Flick redesign. Prefer them 
 | [02-backend-spec.md](./02-backend-spec.md) | Stack, data model, offline, AI, IAP, APIs |
 | [03-ui-ux-spec.md](./03-ui-ux-spec.md) | Navigation, player, themes, gestures, screens |
 | [04-deploy-and-secrets.md](./04-deploy-and-secrets.md) | Vercel durable deploy, AI/RevenueCat env keys |
+| [T01-handoff.md](./T01-handoff.md) | Foundation baseline: test status and vault-vs-code deltas |
+
+**One trunk per session.** Do not start the next trunk until the current handoff is filled.
 
 **Pitch:** *The anti-doomscroll reader.*
 
