@@ -26,7 +26,8 @@ class FlickShell extends StatelessWidget {
     // Settings in Library header + Now chrome; avoid FAB over shelf grid.
     final showSettingsFab = false;
 
-    final navIndex = tabIndex <= 0 ? 0 : 1;
+    // Library first in the bar; tabIndex 1 = Library, 0 = Now.
+    final navIndex = tabIndex <= 0 ? 1 : 0;
     final playerTab = tabIndex == 0;
 
     return Scaffold(
@@ -36,17 +37,18 @@ class FlickShell extends StatelessWidget {
       bottomNavigationBar: NavigationBar(
         height: 60,
         selectedIndex: navIndex,
-        onDestinationSelected: (i) => context.read<FlickController>().setTab(i),
+        onDestinationSelected: (i) =>
+            context.read<FlickController>().setTab(i == 0 ? 1 : 0),
         destinations: const [
-          NavigationDestination(
-            icon: Icon(Icons.play_circle_outline),
-            selectedIcon: Icon(Icons.play_circle_filled),
-            label: 'Now',
-          ),
           NavigationDestination(
             icon: Icon(Icons.menu_book_outlined),
             selectedIcon: Icon(Icons.menu_book),
             label: 'Library',
+          ),
+          NavigationDestination(
+            icon: Icon(Icons.play_circle_outline),
+            selectedIcon: Icon(Icons.play_circle_filled),
+            label: 'Now',
           ),
         ],
       ),

@@ -1,3 +1,5 @@
+import 'dart:math' as math;
+
 import 'package:flutter/material.dart';
 import 'package:google_fonts/google_fonts.dart';
 
@@ -12,19 +14,19 @@ class FlickBookCover extends StatelessWidget {
     this.width = 72,
     this.height = 96,
     this.borderRadius = 8,
+    this.layout = BookCoverLayout.auto,
   });
 
   final LibraryBook book;
   final double width;
   final double height;
   final double borderRadius;
-
-  /// Full title stack needs ~76px; smaller slots use monogram layout.
-  bool get _compact => height < 78 || width < 60;
+  final BookCoverLayout layout;
 
   @override
   Widget build(BuildContext context) {
     final meta = coverMetaForBook(book);
+    final tier = _resolveTier();
     if (meta.source == CoverSource.bundled &&
         meta.assetPath != null &&
         meta.assetPath!.isNotEmpty) {
@@ -40,7 +42,7 @@ class FlickBookCover extends StatelessWidget {
             width: width,
             height: height,
             borderRadius: borderRadius,
-            compact: _compact,
+            tier: tier,
           ),
         ),
       );
@@ -50,10 +52,27 @@ class FlickBookCover extends StatelessWidget {
       width: width,
       height: height,
       borderRadius: borderRadius,
-      compact: _compact,
+      tier: tier,
     );
   }
+
+  _CoverTier _resolveTier() {
+    switch (layout) {
+      case BookCoverLayout.chip:
+        return _CoverTier.chip;
+      case BookCoverLayout.poster:
+        return _CoverTier.poster;
+      case BookCoverLayout.auto:
+        if (height < 78 || width < 60) return _CoverTier.chip;
+        if (width >= 96 && height >= 118) return _CoverTier.poster;
+        return _CoverTier.standard;
+    }
+  }
 }
+
+enum BookCoverLayout { auto, chip, poster }
+
+enum _CoverTier { chip, standard, poster }
 
 class _TypographyCover extends StatelessWidget {
   const _TypographyCover({
@@ -61,14 +80,14 @@ class _TypographyCover extends StatelessWidget {
     required this.width,
     required this.height,
     required this.borderRadius,
-    required this.compact,
+    required this.tier,
   });
 
   final LibraryBook book;
   final double width;
   final double height;
   final double borderRadius;
-  final bool compact;
+  final _CoverTier tier;
 
   @override
   Widget build(BuildContext context) {
@@ -76,8 +95,11 @@ class _TypographyCover extends StatelessWidget {
     final onDark = HSLColor.fromAHSL(1, hue, 0.08, 0.95).toColor();
     final ink = HSLColor.fromAHSL(1, hue, 0.35, 0.22).toColor();
     final accent = HSLColor.fromAHSL(1, hue, 0.55, 0.45).toColor();
-    final title = _shortTitle(book.title, compact ? 28 : 48);
     final author = book.author ?? '';
+    final title = _shortTitle(
+      book.title,
+      tier == _CoverTier.chip ? 28 : (tier == _CoverTier.poster ? 64 : 48),
+    );
 
     final gradient = BoxDecoration(
       borderRadius: BorderRadius.circular(borderRadius),
@@ -92,45 +114,6 @@ class _TypographyCover extends StatelessWidget {
       border: Border.all(color: ink.withValues(alpha: 0.12)),
     );
 
-    if (compact) {
-      return ClipRRect(
-        borderRadius: BorderRadius.circular(borderRadius),
-        child: SizedBox(
-          width: width,
-          height: height,
-          child: DecoratedBox(
-            decoration: gradient,
-            child: Stack(
-              children: [
-                Positioned(
-                  top: 5,
-                  right: 5,
-                  child: Container(
-                    width: 10,
-                    height: 10,
-                    decoration: BoxDecoration(
-                      color: accent.withValues(alpha: 0.85),
-                      borderRadius: BorderRadius.circular(2),
-                    ),
-                  ),
-                ),
-                Center(
-                  child: Text(
-                    _monogram(book.title),
-                    style: GoogleFonts.literata(
-                      fontSize: (width * 0.38).clamp(16, 24),
-                      fontWeight: FontWeight.w700,
-                      color: onDark,
-                    ),
-                  ),
-                ),
-              ],
-            ),
-          ),
-        ),
-      );
-    }
-
     return ClipRRect(
       borderRadius: BorderRadius.circular(borderRadius),
       clipBehavior: Clip.hardEdge,
@@ -139,58 +122,190 @@ class _TypographyCover extends StatelessWidget {
         height: height,
         child: DecoratedBox(
           decoration: gradient,
-          child: Stack(
-            children: [
-              Positioned(
-                top: 6,
-                right: 6,
-                child: Container(
-                  width: 14,
-                  height: 14,
-                  decoration: BoxDecoration(
-                    color: accent.withValues(alpha: 0.85),
-                    borderRadius: BorderRadius.circular(3),
-                  ),
-                ),
-              ),
-              Positioned.fill(
-                child: Padding(
-                  padding: const EdgeInsets.fromLTRB(8, 9, 8, 7),
-                  child: Column(
-                    crossAxisAlignment: CrossAxisAlignment.start,
-                    children: [
-                      Expanded(
-                        child: Text(
-                          title,
-                          maxLines: 4,
-                          overflow: TextOverflow.ellipsis,
-                          style: GoogleFonts.literata(
-                            fontSize: width > 60 ? 11 : 10,
-                            height: 1.12,
-                            fontWeight: FontWeight.w600,
-                            color: onDark,
-                          ),
-                        ),
-                      ),
-                      if (author.isNotEmpty)
-                        Text(
-                          author,
-                          maxLines: 2,
-                          overflow: TextOverflow.ellipsis,
-                          style: GoogleFonts.literata(
-                            fontSize: 8,
-                            height: 1.08,
-                            color: onDark.withValues(alpha: 0.82),
-                          ),
-                        ),
-                    ],
-                  ),
-                ),
-              ),
-            ],
-          ),
+          child: switch (tier) {
+            _CoverTier.chip => _chipBody(accent, onDark),
+            _CoverTier.standard => _standardBody(title, author, accent, onDark),
+            _CoverTier.poster => _posterBody(title, author, accent, onDark),
+          },
         ),
       ),
+    );
+  }
+
+  Widget _chipBody(Color accent, Color onDark) {
+    return Stack(
+      children: [
+        Positioned(
+          top: 5,
+          right: 5,
+          child: Container(
+            width: 10,
+            height: 10,
+            decoration: BoxDecoration(
+              color: accent.withValues(alpha: 0.85),
+              borderRadius: BorderRadius.circular(2),
+            ),
+          ),
+        ),
+        Center(
+          child: Text(
+            _monogram(book.title),
+            style: GoogleFonts.literata(
+              fontSize: (math.min(width, height) * 0.34).clamp(15, 22),
+              fontWeight: FontWeight.w700,
+              color: onDark,
+            ),
+          ),
+        ),
+      ],
+    );
+  }
+
+  Widget _standardBody(
+    String title,
+    String author,
+    Color accent,
+    Color onDark,
+  ) {
+    final pad = (width * 0.07).clamp(7.0, 11.0);
+    final titleSize = (width * 0.085).clamp(10.0, 15.0);
+    final authorSize = (titleSize * 0.72).clamp(8.0, 11.0);
+    final chip = (width * 0.08).clamp(11.0, 14.0);
+
+    return Stack(
+      children: [
+        Positioned(
+          top: pad,
+          right: pad,
+          child: Container(
+            width: chip,
+            height: chip,
+            decoration: BoxDecoration(
+              color: accent.withValues(alpha: 0.85),
+              borderRadius: BorderRadius.circular(chip * 0.22),
+            ),
+          ),
+        ),
+        Positioned.fill(
+          child: Padding(
+            padding: EdgeInsets.fromLTRB(pad, pad * 1.1, pad, pad * 0.9),
+            child: Column(
+              crossAxisAlignment: CrossAxisAlignment.start,
+              children: [
+                Expanded(
+                  child: Text(
+                    title,
+                    maxLines: 4,
+                    overflow: TextOverflow.ellipsis,
+                    style: GoogleFonts.literata(
+                      fontSize: titleSize,
+                      height: 1.12,
+                      fontWeight: FontWeight.w600,
+                      color: onDark,
+                    ),
+                  ),
+                ),
+                if (author.isNotEmpty)
+                  Text(
+                    author,
+                    maxLines: 2,
+                    overflow: TextOverflow.ellipsis,
+                    style: GoogleFonts.literata(
+                      fontSize: authorSize,
+                      height: 1.08,
+                      color: onDark.withValues(alpha: 0.82),
+                    ),
+                  ),
+              ],
+            ),
+          ),
+        ),
+      ],
+    );
+  }
+
+  Widget _posterBody(
+    String title,
+    String author,
+    Color accent,
+    Color onDark,
+  ) {
+    final pad = (width * 0.09).clamp(12.0, 18.0);
+    final titleSize = (width * 0.105).clamp(16.0, 26.0);
+    final authorSize = (titleSize * 0.62).clamp(11.0, 15.0);
+    final chip = (width * 0.09).clamp(14.0, 20.0);
+    final watermark = (math.min(width, height) * 0.42).clamp(48.0, 120.0);
+
+    return Stack(
+      fit: StackFit.expand,
+      children: [
+        Center(
+          child: Text(
+            _monogram(book.title),
+            style: GoogleFonts.literata(
+              fontSize: watermark,
+              fontWeight: FontWeight.w700,
+              color: onDark.withValues(alpha: 0.14),
+            ),
+          ),
+        ),
+        Positioned(
+          top: pad,
+          right: pad,
+          child: Container(
+            width: chip,
+            height: chip,
+            decoration: BoxDecoration(
+              color: accent.withValues(alpha: 0.9),
+              borderRadius: BorderRadius.circular(chip * 0.22),
+            ),
+          ),
+        ),
+        Positioned(
+          left: pad,
+          right: pad,
+          bottom: pad,
+          child: DecoratedBox(
+            decoration: BoxDecoration(
+              color: Colors.black.withValues(alpha: 0.22),
+              borderRadius: BorderRadius.circular(8),
+            ),
+            child: Padding(
+              padding: EdgeInsets.fromLTRB(pad * 0.85, pad * 0.65, pad * 0.85, pad * 0.75),
+              child: Column(
+                crossAxisAlignment: CrossAxisAlignment.start,
+                mainAxisSize: MainAxisSize.min,
+                children: [
+                  Text(
+                    title,
+                    maxLines: 3,
+                    overflow: TextOverflow.ellipsis,
+                    style: GoogleFonts.literata(
+                      fontSize: titleSize,
+                      height: 1.08,
+                      fontWeight: FontWeight.w700,
+                      color: onDark,
+                    ),
+                  ),
+                  if (author.isNotEmpty) ...[
+                    SizedBox(height: pad * 0.35),
+                    Text(
+                      author,
+                      maxLines: 2,
+                      overflow: TextOverflow.ellipsis,
+                      style: GoogleFonts.literata(
+                        fontSize: authorSize,
+                        height: 1.1,
+                        color: onDark.withValues(alpha: 0.88),
+                      ),
+                    ),
+                  ],
+                ],
+              ),
+            ),
+          ),
+        ),
+      ],
     );
   }
 
