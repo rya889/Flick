@@ -1,4 +1,4 @@
-enum BookSource { epub, txt, paste, sample }
+enum BookSource { epub, txt, paste, sample, catalog }
 
 enum PlayMode { story, bounce }
 

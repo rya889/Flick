@@ -9,6 +9,7 @@ import '../services/library_access.dart';
 import '../state/flick_controller.dart';
 import 'ebook_reader.dart';
 import 'paywall_sheet.dart';
+import 'pd_catalog_screen.dart';
 import 'sync_sheet.dart';
 
 class LibraryScreen extends StatefulWidget {
@@ -37,8 +38,8 @@ class _LibraryScreenState extends State<LibraryScreen> {
               const SizedBox(height: 4),
               Text(
                 c.plusActive
-                    ? '${c.importedBookCount} of ${c.libraryBookLimit} books · EPUB included'
-                    : '${c.importedBookCount} of ${c.libraryBookLimit} books · TXT and paste',
+                    ? '${c.importedBookCount} of ${c.libraryBookLimit} books · Pro'
+                    : '${c.importedBookCount} of ${c.libraryBookLimit} imports · samples free',
                 style: Theme.of(context).textTheme.bodyMedium,
               ),
             ],
@@ -70,6 +71,17 @@ class _LibraryScreenState extends State<LibraryScreen> {
                 onPressed: () => showSyncSheet(context),
                 icon: const Icon(Icons.sync),
                 label: const Text('Sync'),
+              ),
+              OutlinedButton.icon(
+                onPressed: () {
+                  Navigator.of(context).push(
+                    MaterialPageRoute<void>(
+                      builder: (_) => const PdCatalogScreen(),
+                    ),
+                  );
+                },
+                icon: const Icon(Icons.public),
+                label: const Text('Browse PD'),
               ),
             ],
           ),

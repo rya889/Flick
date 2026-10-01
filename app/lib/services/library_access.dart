@@ -20,7 +20,8 @@ bool importAllowed(BookSource source, {required bool premium}) {
   if (source == BookSource.epub) return premium;
   return source == BookSource.txt ||
       source == BookSource.paste ||
-      source == BookSource.sample;
+      source == BookSource.sample ||
+      source == BookSource.catalog;
 }
 
 LibraryBlock? blockImport(

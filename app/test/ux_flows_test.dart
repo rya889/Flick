@@ -30,6 +30,8 @@ void main() {
       LibraryBlock.extensionLocked,
     );
     expect(blockImport(BookSource.epub, premium: true, importedBooks: 2), isNull);
+    expect(blockImport(BookSource.catalog, premium: false, importedBooks: 0), isNull);
+    expect(blockImport(BookSource.sample, premium: false, importedBooks: 99), isNull);
   });
 
   test('reader place and flick short stay on the same passage', () {
