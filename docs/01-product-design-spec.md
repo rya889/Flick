@@ -135,7 +135,7 @@ AI TLDR is Plus. Free users get **extractive lite-TLDR** only (instant, lower qu
 | Item | Decision |
 |------|----------|
 | Model | Subscription (**Flick Plus**) |
-| Price | **$6.99/mo** and **$49.99/yr** |
+| Price | **$4.99/mo** and **$29.99/yr** (Pro; voices in Pro) |
 | Trial | **7-day free trial** on yearly |
 | Restore / Family Sharing | Not required for v1 |
 

@@ -50,10 +50,21 @@ class _PaywallSheetState extends State<PaywallSheet> {
     final c = context.watch<FlickController>();
     final demo = c.plusService.usesDemo;
     final headline = switch (widget.reason) {
-      PaywallReason.listenCap => 'Listen',
+      PaywallReason.listenCap => 'Unlimited Listen',
       PaywallReason.libraryCap => 'Library is full',
-      PaywallReason.epub => 'EPUB is Premium',
-      PaywallReason.settings => 'Flick Premium',
+      PaywallReason.epub => 'EPUB import',
+      PaywallReason.settings => 'Flick Pro',
+    };
+
+    final detail = switch (widget.reason) {
+      PaywallReason.listenCap =>
+        'Free tier includes 60 minutes of Listen per day. Pro adds unlimited Listen and premium voices. Public-domain chapters are always free to read.',
+      PaywallReason.libraryCap =>
+        'Free tier holds 2 imported books (plus bundled samples). Pro expands your shelf to 50 books and enables EPUB.',
+      PaywallReason.epub =>
+        'EPUB import is a Pro perk. Paste or TXT import stays free; bundled public-domain samples are never paywalled.',
+      PaywallReason.settings =>
+        'Pro: unlimited Listen, premium voices, larger library, EPUB. Books in the public domain are never chapter-gated.',
     };
 
     return SafeArea(
@@ -72,24 +83,24 @@ class _PaywallSheetState extends State<PaywallSheet> {
                   ),
             ),
             const SizedBox(height: 12),
+            Text(detail, style: Theme.of(context).textTheme.bodyMedium),
+            const SizedBox(height: 16),
             Text(
-              'Free includes 2 books as TXT or pasted text, the page reader, follow-along, and Listen. Premium raises the library to 50 books and adds EPUB.',
-              style: Theme.of(context).textTheme.bodyMedium,
+              r'$4.99 / month · $29.99 / year (best value)',
+              style: Theme.of(context).textTheme.titleMedium,
             ),
             const SizedBox(height: 20),
             FilledButton(
               onPressed: _busy || c.plusActive
                   ? null
                   : () => _run(c.purchasePremium),
-              child: Text(
-                demo ? 'Unlock Premium on this device' : 'Unlock Premium',
-              ),
+              child: Text(demo ? 'Unlock Pro on this device' : 'Start Pro monthly'),
             ),
             const SizedBox(height: 8),
             if (!demo && !c.plusActive) ...[
               OutlinedButton(
                 onPressed: _busy ? null : () => _run(c.purchasePlusYearly),
-                child: const Text(r'Or yearly · $49.99'),
+                child: const Text(r'Pro yearly · $29.99'),
               ),
               const SizedBox(height: 8),
               TextButton(
@@ -120,9 +131,7 @@ class _PaywallSheetState extends State<PaywallSheet> {
               ),
             if (c.plusActive)
               Text(
-                demo
-                    ? 'Premium is unlocked on this device.'
-                    : 'Flick Premium is active.',
+                demo ? 'Pro is unlocked on this device.' : 'Flick Pro is active.',
                 textAlign: TextAlign.center,
                 style: Theme.of(context).textTheme.bodyMedium,
               ),
