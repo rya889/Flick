@@ -6,6 +6,7 @@ import '../services/listen_cap.dart';
 import '../state/flick_controller.dart';
 import 'house_pro_prompt.dart';
 import 'paywall_sheet.dart';
+import 'settings_sheet.dart';
 import 'shell.dart';
 
 class NowPlayer extends StatefulWidget {
@@ -93,10 +94,11 @@ class _NowPlayerState extends State<NowPlayer> {
     return Column(
       children: [
         Padding(
-          padding: const EdgeInsets.fromLTRB(16, 8, 16, 0),
+          padding: const EdgeInsets.fromLTRB(12, 2, 4, 0),
           child: Column(
             children: [
               Row(
+                crossAxisAlignment: CrossAxisAlignment.center,
                 children: [
                   Expanded(
                     child: Column(
@@ -106,32 +108,39 @@ class _NowPlayerState extends State<NowPlayer> {
                           item.book.title,
                           maxLines: 1,
                           overflow: TextOverflow.ellipsis,
-                          style: Theme.of(context).textTheme.headlineSmall,
+                          style: Theme.of(context).textTheme.titleLarge,
                         ),
                         Text(
-                          c.playing ? 'Playing' : 'Paused · tap the page to play',
-                          style: Theme.of(context).textTheme.bodyMedium,
+                          c.playing ? 'Playing' : 'Paused · tap to play',
+                          style: Theme.of(context).textTheme.bodySmall,
                         ),
                       ],
                     ),
                   ),
                   IconButton(
+                    visualDensity: VisualDensity.compact,
                     tooltip: c.playing ? 'Pause' : 'Play',
                     onPressed: c.togglePlay,
-                    icon: Icon(c.playing ? Icons.pause_circle : Icons.play_circle),
+                    icon: Icon(
+                      c.playing ? Icons.pause_circle : Icons.play_circle,
+                      size: 32,
+                    ),
                   ),
                 ],
               ),
-              const SizedBox(height: 10),
+              const SizedBox(height: 4),
               const ChapterPips(),
-              const SizedBox(height: 8),
+              const SizedBox(height: 2),
               Row(
                 children: [
                   IconButton(
+                    visualDensity: VisualDensity.compact,
+                    padding: const EdgeInsets.all(4),
+                    constraints: const BoxConstraints(minWidth: 36, minHeight: 36),
                     onPressed: c.playMode == PlayMode.story
                         ? () => c.jumpChapter(-1)
                         : null,
-                    icon: const Icon(Icons.chevron_left),
+                    icon: const Icon(Icons.chevron_left, size: 22),
                     tooltip: 'Previous chapter',
                   ),
                   Expanded(
@@ -140,14 +149,17 @@ class _NowPlayerState extends State<NowPlayer> {
                       textAlign: TextAlign.center,
                       maxLines: 1,
                       overflow: TextOverflow.ellipsis,
-                      style: Theme.of(context).textTheme.bodyMedium,
+                      style: Theme.of(context).textTheme.labelLarge,
                     ),
                   ),
                   IconButton(
+                    visualDensity: VisualDensity.compact,
+                    padding: const EdgeInsets.all(4),
+                    constraints: const BoxConstraints(minWidth: 36, minHeight: 36),
                     onPressed: c.playMode == PlayMode.story
                         ? () => c.jumpChapter(1)
                         : null,
-                    icon: const Icon(Icons.chevron_right),
+                    icon: const Icon(Icons.chevron_right, size: 22),
                     tooltip: 'Next chapter',
                   ),
                 ],
@@ -187,36 +199,29 @@ class _NowPlayerState extends State<NowPlayer> {
                       }
                     },
                     child: Padding(
-                      padding: const EdgeInsets.symmetric(horizontal: 22),
-                      child: Column(
-                        children: [
-                          const SizedBox(height: 8),
-                          Expanded(
-                            child: Center(
-                              child: DecoratedBox(
-                                decoration: BoxDecoration(
-                                  color: Theme.of(context).colorScheme.surface,
-                                  borderRadius: BorderRadius.circular(20),
-                                  border: Border.all(
-                                    color: Theme.of(context)
-                                        .colorScheme
-                                        .onSurface
-                                        .withValues(alpha: 0.08),
-                                  ),
-                                ),
-                                child: SingleChildScrollView(
-                                  padding: const EdgeInsets.fromLTRB(20, 22, 20, 22),
-                                  child: KaraokeText(
-                                    text: text,
-                                    activeIndex: active
-                                        ? c.karaokeWord
-                                        : wordsOf(text).length,
-                                  ),
-                                ),
-                              ),
+                      padding: const EdgeInsets.fromLTRB(10, 4, 10, 6),
+                      child: SizedBox.expand(
+                        child: DecoratedBox(
+                          decoration: BoxDecoration(
+                            color: Theme.of(context).colorScheme.surface,
+                            borderRadius: BorderRadius.circular(16),
+                            border: Border.all(
+                              color: Theme.of(context)
+                                  .colorScheme
+                                  .onSurface
+                                  .withValues(alpha: 0.08),
                             ),
                           ),
-                        ],
+                          child: SingleChildScrollView(
+                            padding: const EdgeInsets.fromLTRB(14, 14, 14, 14),
+                            child: KaraokeText(
+                            text: text,
+                            activeIndex: active
+                                ? c.karaokeWord
+                                : wordsOf(text).length,
+                            ),
+                          ),
+                        ),
                       ),
                     ),
                   );
@@ -253,10 +258,10 @@ class _PausePlayOverlay extends StatelessWidget {
           shape: BoxShape.circle,
         ),
         child: Padding(
-          padding: const EdgeInsets.all(18),
+          padding: const EdgeInsets.all(14),
           child: Icon(
             Icons.play_arrow_rounded,
-            size: 56,
+            size: 44,
             color: scheme.onPrimary,
           ),
         ),
@@ -280,8 +285,14 @@ class _ChromeBar extends StatelessWidget {
     final hearted = c.hearts.contains(item.short.id);
     final saved = c.saves.contains(item.short.id);
 
+    final listenLabel = !c.plusActive
+        ? (c.listenCapped
+            ? 'Listen cap — Pro'
+            : formatListenRemaining(c.listenRemainingSeconds))
+        : null;
+
     return Container(
-      padding: const EdgeInsets.fromLTRB(12, 8, 12, 12),
+      padding: const EdgeInsets.fromLTRB(8, 4, 8, 4),
       decoration: BoxDecoration(
         color: Theme.of(context).colorScheme.surface,
         border: Border(
@@ -291,22 +302,25 @@ class _ChromeBar extends StatelessWidget {
         ),
       ),
       child: Column(
+        mainAxisSize: MainAxisSize.min,
         children: [
-          if (!c.plusActive)
-            Padding(
-              padding: const EdgeInsets.only(bottom: 4),
-              child: Text(
-                c.listenCapped
-                    ? 'Free Listen cap reached — Pro for unlimited'
-                    : formatListenRemaining(c.listenRemainingSeconds),
-                textAlign: TextAlign.center,
-                style: Theme.of(context).textTheme.labelMedium,
-              ),
-            ),
           Row(
             children: [
-              const Spacer(),
+              if (listenLabel != null)
+                Expanded(
+                  child: Text(
+                    listenLabel,
+                    maxLines: 1,
+                    overflow: TextOverflow.ellipsis,
+                    style: Theme.of(context).textTheme.labelSmall,
+                  ),
+                )
+              else
+                const Spacer(),
               IconButton(
+                visualDensity: VisualDensity.compact,
+                padding: const EdgeInsets.all(6),
+                constraints: const BoxConstraints(minWidth: 36, minHeight: 36),
                 tooltip: c.muted ? 'Unmute / Listen' : 'Mute',
                 onPressed: () async {
                   final ok = await c.toggleMute();
@@ -322,16 +336,20 @@ class _ChromeBar extends StatelessWidget {
                     ScaffoldMessenger.of(context).showSnackBar(
                       const SnackBar(
                         content: Text(
-                          'This is the basic iPhone voice. For a natural one: Settings → Accessibility → Spoken Content → Voices → English, download Premium (Ava or Zoe), then turn Listen off and on.',
+                          'Basic voice — download a premium voice in iOS Settings → Spoken Content, or try Pro later.',
                         ),
                       ),
                     );
                   }
                 },
-                icon: Icon(c.muted ? Icons.volume_off : Icons.volume_up),
+                icon: Icon(
+                  c.muted ? Icons.volume_off : Icons.volume_up,
+                  size: 22,
+                ),
               ),
               PopupMenuButton<double>(
                 tooltip: 'Speed',
+                padding: EdgeInsets.zero,
                 initialValue: c.playbackSpeed,
                 onSelected: (v) => c.setPlaybackSpeed(v),
                 itemBuilder: (context) => [
@@ -343,30 +361,53 @@ class _ChromeBar extends StatelessWidget {
                     ),
                 ],
                 child: Padding(
-                  padding: const EdgeInsets.symmetric(horizontal: 8, vertical: 8),
-                  child: Text('${_formatSpeed(c.playbackSpeed)}x'),
+                  padding: const EdgeInsets.symmetric(horizontal: 6, vertical: 6),
+                  child: Text(
+                    '${_formatSpeed(c.playbackSpeed)}x',
+                    style: Theme.of(context).textTheme.labelLarge,
+                  ),
                 ),
+              ),
+              IconButton(
+                visualDensity: VisualDensity.compact,
+                padding: const EdgeInsets.all(6),
+                constraints: const BoxConstraints(minWidth: 36, minHeight: 36),
+                tooltip: 'Settings',
+                onPressed: () => showSettingsSheet(context),
+                icon: const Icon(Icons.settings_outlined, size: 22),
               ),
             ],
           ),
-          const SizedBox(height: 8),
           Row(
             mainAxisAlignment: MainAxisAlignment.spaceEvenly,
             children: [
               IconButton(
+                visualDensity: VisualDensity.compact,
+                padding: const EdgeInsets.all(6),
+                constraints: const BoxConstraints(minWidth: 40, minHeight: 36),
                 onPressed: () => c.toggleHeart(),
                 icon: Icon(
                   hearted ? Icons.favorite : Icons.favorite_border,
+                  size: 22,
                   color: hearted ? Theme.of(context).colorScheme.primary : null,
                 ),
               ),
               IconButton(
+                visualDensity: VisualDensity.compact,
+                padding: const EdgeInsets.all(6),
+                constraints: const BoxConstraints(minWidth: 40, minHeight: 36),
                 onPressed: () => c.toggleSave(),
-                icon: Icon(saved ? Icons.bookmark : Icons.bookmark_border),
+                icon: Icon(
+                  saved ? Icons.bookmark : Icons.bookmark_border,
+                  size: 22,
+                ),
               ),
               IconButton(
+                visualDensity: VisualDensity.compact,
+                padding: const EdgeInsets.all(6),
+                constraints: const BoxConstraints(minWidth: 40, minHeight: 36),
                 onPressed: () => c.shareCurrent(),
-                icon: const Icon(Icons.ios_share),
+                icon: const Icon(Icons.ios_share, size: 22),
               ),
             ],
           ),

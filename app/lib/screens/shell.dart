@@ -23,7 +23,8 @@ class FlickShell extends StatelessWidget {
       );
     }
 
-    final showSettingsFab = tabIndex != 1;
+    // Settings live in Now chrome bar; FAB only on Library.
+    final showSettingsFab = tabIndex == 1;
 
     final navIndex = tabIndex <= 0 ? 0 : 1;
     final playerTab = tabIndex == 0;
@@ -33,6 +34,7 @@ class FlickShell extends StatelessWidget {
         child: playerTab ? const NowPlayer() : const LibraryScreen(),
       ),
       bottomNavigationBar: NavigationBar(
+        height: 60,
         selectedIndex: navIndex,
         onDestinationSelected: (i) => context.read<FlickController>().setTab(i),
         destinations: const [
@@ -175,8 +177,8 @@ class KaraokeText extends StatelessWidget {
                       color: i <= activeIndex
                           ? ink
                           : ink.withValues(alpha: 0.34),
-                      fontSize: 20,
-                      height: 1.55,
+                      fontSize: 19,
+                      height: 1.45,
                     ),
               ),
               if (i < words.length - 1) const TextSpan(text: ' '),

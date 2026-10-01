@@ -10,6 +10,7 @@ import '../state/flick_controller.dart';
 import 'ebook_reader.dart';
 import 'paywall_sheet.dart';
 import 'pd_catalog_screen.dart';
+import 'settings_sheet.dart';
 import 'sync_sheet.dart';
 
 class LibraryScreen extends StatefulWidget {
@@ -34,7 +35,21 @@ class _LibraryScreenState extends State<LibraryScreen> {
           child: Column(
             crossAxisAlignment: CrossAxisAlignment.start,
             children: [
-              Text('Library', style: Theme.of(context).textTheme.headlineMedium),
+              Row(
+                children: [
+                  Expanded(
+                    child: Text(
+                      'Library',
+                      style: Theme.of(context).textTheme.headlineMedium,
+                    ),
+                  ),
+                  IconButton(
+                    tooltip: 'Settings',
+                    onPressed: () => showSettingsSheet(context),
+                    icon: const Icon(Icons.settings_outlined),
+                  ),
+                ],
+              ),
               const SizedBox(height: 4),
               Text(
                 c.plusActive
