@@ -23,8 +23,8 @@ class FlickShell extends StatelessWidget {
       );
     }
 
-    // Settings live in Now chrome bar; FAB only on Library.
-    final showSettingsFab = tabIndex == 1;
+    // Settings in Library header + Now chrome; avoid FAB over shelf grid.
+    final showSettingsFab = false;
 
     final navIndex = tabIndex <= 0 ? 0 : 1;
     final playerTab = tabIndex == 0;

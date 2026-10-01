@@ -463,32 +463,36 @@ class _ContinueReadingCard extends StatelessWidget {
           child: Padding(
             padding: const EdgeInsets.all(12),
             child: Row(
+              crossAxisAlignment: CrossAxisAlignment.center,
               children: [
-                FlickBookCover(book: book, width: 56, height: 76),
-                const SizedBox(width: 12),
+                FlickBookCover(book: book, width: 52, height: 68),
+                const SizedBox(width: 10),
                 Expanded(
                   child: Column(
+                    mainAxisSize: MainAxisSize.min,
                     crossAxisAlignment: CrossAxisAlignment.start,
                     children: [
                       Text(
                         'Continue reading',
-                        style: Theme.of(context).textTheme.labelLarge,
+                        style: Theme.of(context).textTheme.labelMedium,
                       ),
                       Text(
                         book.title,
-                        maxLines: 2,
+                        maxLines: 1,
                         overflow: TextOverflow.ellipsis,
-                        style: Theme.of(context).textTheme.titleMedium,
+                        style: Theme.of(context).textTheme.titleSmall,
                       ),
                       if (chip != null)
-                        Padding(
-                          padding: const EdgeInsets.only(top: 4),
-                          child: Text(chip, style: Theme.of(context).textTheme.bodySmall),
+                        Text(
+                          chip,
+                          maxLines: 1,
+                          overflow: TextOverflow.ellipsis,
+                          style: Theme.of(context).textTheme.bodySmall,
                         ),
                     ],
                   ),
                 ),
-                const Icon(Icons.play_arrow_rounded, size: 32),
+                const Icon(Icons.play_arrow_rounded, size: 28),
               ],
             ),
           ),
@@ -511,7 +515,7 @@ class _ShelfCoverGrid extends StatelessWidget {
         crossAxisCount: 2,
         mainAxisSpacing: 12,
         crossAxisSpacing: 12,
-        childAspectRatio: 0.58,
+        childAspectRatio: 0.52,
       ),
       itemCount: books.length,
       itemBuilder: (context, index) => _ShelfBookCard(book: books[index]),
@@ -556,36 +560,43 @@ class _ShelfBookCard extends StatelessWidget {
               ),
             ),
             Padding(
-              padding: const EdgeInsets.fromLTRB(8, 6, 8, 8),
-              child: Column(
+              padding: const EdgeInsets.fromLTRB(8, 4, 4, 6),
+              child: Row(
                 crossAxisAlignment: CrossAxisAlignment.start,
                 children: [
-                  Text(
-                    book.title,
-                    maxLines: 2,
-                    overflow: TextOverflow.ellipsis,
-                    style: Theme.of(context).textTheme.titleSmall,
-                  ),
-                  if (meta.isNotEmpty)
-                    Text(
-                      meta,
-                      maxLines: 2,
-                      overflow: TextOverflow.ellipsis,
-                      style: Theme.of(context).textTheme.bodySmall,
-                    ),
-                  Align(
-                    alignment: Alignment.centerRight,
-                    child: IconButton(
-                      visualDensity: VisualDensity.compact,
-                      tooltip: 'Page reader',
-                      onPressed: () {
-                        Navigator.of(context).push(
-                          MaterialPageRoute<void>(
-                            builder: (_) => EbookReaderScreen(book: book),
+                  Expanded(
+                    child: Column(
+                      mainAxisSize: MainAxisSize.min,
+                      crossAxisAlignment: CrossAxisAlignment.start,
+                      children: [
+                        Text(
+                          book.title,
+                          maxLines: 2,
+                          overflow: TextOverflow.ellipsis,
+                          style: Theme.of(context).textTheme.titleSmall,
+                        ),
+                        if (meta.isNotEmpty)
+                          Text(
+                            meta,
+                            maxLines: 1,
+                            overflow: TextOverflow.ellipsis,
+                            style: Theme.of(context).textTheme.bodySmall,
                           ),
-                        );
-                      },
-                      icon: const Icon(Icons.auto_stories_outlined, size: 20),
+                      ],
+                    ),
+                  ),
+                  InkWell(
+                    onTap: () {
+                      Navigator.of(context).push(
+                        MaterialPageRoute<void>(
+                          builder: (_) => EbookReaderScreen(book: book),
+                        ),
+                      );
+                    },
+                    borderRadius: BorderRadius.circular(8),
+                    child: const Padding(
+                      padding: EdgeInsets.all(6),
+                      child: Icon(Icons.auto_stories_outlined, size: 20),
                     ),
                   ),
                 ],
