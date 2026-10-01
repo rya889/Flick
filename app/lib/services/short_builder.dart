@@ -1,8 +1,9 @@
 import '../models/models.dart';
 import 'abbreviate.dart';
 
-const targetWords = 90;
-const minWords = 40;
+/// ~60–120 words targets ~20–45s Listen at 1x (T05 snackable shorts).
+const targetWords = 85;
+const minWords = 52;
 
 final _chapterHeading = RegExp(
   r'^(?:CHAPTER|Chapter|PART|Part|BOOK|Book|SECTION|Section)\s+.+$',

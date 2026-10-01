@@ -23,5 +23,9 @@ void main() {
     final shorts = buildShorts(book);
     expect(shorts, isNotEmpty);
     expect(shorts.first.original.trim().isNotEmpty, isTrue);
+    final wordCounts = shorts.map((s) => s.wordCount).toList();
+    final snackable =
+        wordCounts.where((w) => w >= 40 && w <= 180).length;
+    expect(snackable, greaterThan(wordCounts.length ~/ 3));
   });
 }
