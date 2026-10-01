@@ -7,7 +7,6 @@ import 'package:provider/provider.dart';
 import '../models/models.dart';
 import '../services/library_access.dart';
 import '../state/flick_controller.dart';
-import 'ebook_reader.dart';
 import 'paywall_sheet.dart';
 import 'pd_catalog_screen.dart';
 import 'settings_sheet.dart';
@@ -659,13 +658,7 @@ class _ShelfBookCard extends StatelessWidget {
                     ),
                   ),
                   InkWell(
-                    onTap: () {
-                      Navigator.of(context).push(
-                        MaterialPageRoute<void>(
-                          builder: (_) => EbookReaderScreen(book: book),
-                        ),
-                      );
-                    },
+                    onTap: () => c.openBookInPages(book),
                     borderRadius: BorderRadius.circular(8),
                     child: Padding(
                       padding: const EdgeInsets.all(6),
@@ -721,11 +714,7 @@ class _SampleTile extends StatelessWidget {
               tooltip: 'Read',
               onPressed: () {
                 final book = c.books.firstWhere((b) => b.id == sample.id);
-                Navigator.of(context).push(
-                  MaterialPageRoute<void>(
-                    builder: (_) => EbookReaderScreen(book: book),
-                  ),
-                );
+                c.openBookInPages(book);
               },
               icon: const Icon(Icons.auto_stories_outlined),
             )

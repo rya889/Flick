@@ -13,16 +13,33 @@ import '../services/tts_voice.dart';
 import '../state/flick_controller.dart';
 import 'house_pro_prompt.dart';
 
-class EbookReaderScreen extends StatefulWidget {
+/// Full-screen route wrapper (Library). Prefer Now tab + [ReadingLayout.pages].
+class EbookReaderScreen extends StatelessWidget {
   const EbookReaderScreen({super.key, required this.book});
 
   final LibraryBook book;
 
   @override
-  State<EbookReaderScreen> createState() => _EbookReaderScreenState();
+  Widget build(BuildContext context) {
+    return Scaffold(
+      body: SafeArea(
+        child: ReaderPagePane(book: book, embedded: false),
+      ),
+    );
+  }
 }
 
-class _EbookReaderScreenState extends State<EbookReaderScreen> {
+class ReaderPagePane extends StatefulWidget {
+  const ReaderPagePane({super.key, required this.book, this.embedded = false});
+
+  final LibraryBook book;
+  final bool embedded;
+
+  @override
+  State<ReaderPagePane> createState() => _ReaderPagePaneState();
+}
+
+class _ReaderPagePaneState extends State<ReaderPagePane> {
   PageController? _pageController;
   List<PageSlice> _pages = const [];
   List<ReaderChapter> _chapters = const [];
@@ -46,14 +63,31 @@ class _EbookReaderScreenState extends State<EbookReaderScreen> {
     super.initState();
     _controller = context.read<FlickController>();
     _controller!.addListener(_onController);
-    _controller!.beginReaderSession();
+    if (widget.embedded) {
+      _controller!.readerOpen = true;
+      _controller!.readerPageHost = ReaderPageHostActions(
+        showChapters: _showChapters,
+        showReaderMenu: () => _showReaderMenu(_controller!),
+        pageLabel: pageLabelForChrome,
+        chapterTitle: chapterTitleForChrome,
+      );
+    } else {
+      _controller!.beginReaderSession();
+    }
   }
 
   @override
   void dispose() {
     _followTimer?.cancel();
     _controller?.removeListener(_onController);
-    _controller?.endReaderSession(widget.book.id);
+    if (widget.embedded) {
+      _controller?.readerPageHost = null;
+    }
+    _controller?.endReaderSession(
+      widget.book.id,
+      leavePagesLayout: !widget.embedded,
+      stopAudio: !widget.embedded,
+    );
     _pageController?.dispose();
     super.dispose();
   }
@@ -62,7 +96,13 @@ class _EbookReaderScreenState extends State<EbookReaderScreen> {
 
   void _onController() {
     final c = _controller;
-    if (c == null || !mounted || !_followPlaying) return;
+    if (c == null || !mounted) return;
+    if (widget.embedded &&
+        c.readingLayout == ReadingLayout.pages &&
+        _pages.isNotEmpty) {
+      _syncPageToStoryProgress(c);
+    }
+    if (!_followPlaying) return;
     if (!c.muted &&
         c.readerSpokenWord >= 0 &&
         c.readerSpokenWord != _followWord) {
@@ -74,6 +114,27 @@ class _EbookReaderScreenState extends State<EbookReaderScreen> {
     if (c.readerPageFinishedGen != _armedGen) return;
     _heardFinish = c.readerPageFinishedGen;
     _goRelative(1);
+  }
+
+  void _syncPageToStoryProgress(FlickController c) {
+    final item = c.current;
+    if (item == null || item.book.id != widget.book.id) return;
+    final loc = readerLocationForShort(
+      bookId: widget.book.id,
+      chapters: _chapters,
+      shorts: c.shortsByBook[widget.book.id] ?? [item.short],
+      shortIndex: item.short.index,
+      updatedAt: DateTime.now(),
+    );
+    if (loc == null || _pageController == null) return;
+    final index = pageIndexForLocation(
+      _pages,
+      loc.chapterIndex,
+      loc.charOffset,
+    );
+    if (index != _pageIndex && index >= 0 && index < _pages.length) {
+      _pageController!.jumpToPage(index);
+    }
   }
 
   TextStyle _style(FlickController c, _PaperColors paper) {
@@ -139,6 +200,7 @@ class _EbookReaderScreenState extends State<EbookReaderScreen> {
       });
       _persist();
       if (_followPlaying) _startFollow();
+      _refreshReaderHostLabels();
     } catch (e) {
       if (!mounted) return;
       setState(() {
@@ -433,18 +495,14 @@ class _EbookReaderScreenState extends State<EbookReaderScreen> {
         ? null
         : _pages[_pageIndex.clamp(0, _pages.length - 1)];
     final fraction = _pages.length <= 1 ? 0.0 : _pageIndex / (_pages.length - 1);
-    final activeWord = _followPlaying && c.readerFollowAlong ? _followWord : -1;
-
     final pageLabel = _pages.isEmpty
         ? ''
         : 'Page ${_pageIndex + 1} of ${_pages.length}';
 
-    return Scaffold(
-      backgroundColor: paper.background,
-      body: SafeArea(
-        child: Column(
+    final body = Column(
           children: [
-            if (_chrome) _topBar(context, c, paper, page, pageLabel),
+            if (!widget.embedded && _chrome)
+              _topBar(context, c, paper, page, pageLabel),
             Expanded(
               child: LayoutBuilder(
                 builder: (context, constraints) {
@@ -470,16 +528,32 @@ class _EbookReaderScreenState extends State<EbookReaderScreen> {
                         controller: _pageController,
                         physics: const NeverScrollableScrollPhysics(),
                         itemCount: _pages.length,
-                        onPageChanged: (index) {
-                          setState(() {
-                            _pageIndex = index;
-                            _followWord = 0;
-                          });
-                          _persist();
-                          if (_followPlaying) _startFollow();
-                        },
+                      onPageChanged: (index) {
+                        setState(() {
+                          _pageIndex = index;
+                          _followWord = 0;
+                        });
+                        _persist();
+                        if (_followPlaying) _startFollow();
+                        _refreshReaderHostLabels();
+                      },
                         itemBuilder: (context, index) {
                           final slice = _pages[index];
+                          var activeWord = -1;
+                          if (index == _pageIndex) {
+                            if (_followPlaying && c.readerFollowAlong) {
+                              activeWord = _followWord;
+                            } else if (c.playing &&
+                                c.listening &&
+                                !c.muted &&
+                                c.current != null) {
+                              activeWord = storyKaraokeWordInPage(
+                                slice.text,
+                                c.displayText,
+                                c.karaokeWord,
+                              );
+                            }
+                          }
                           return Padding(
                             padding: const EdgeInsets.symmetric(horizontal: 22),
                             child: Align(
@@ -489,8 +563,7 @@ class _EbookReaderScreenState extends State<EbookReaderScreen> {
                                     ? 'This chapter is empty.'
                                     : slice.text,
                                 style: _style(c, paper),
-                                activeWord:
-                                    index == _pageIndex ? activeWord : -1,
+                                activeWord: activeWord,
                                 highlight: paper.ink.withValues(alpha: 0.16),
                               ),
                             ),
@@ -503,11 +576,40 @@ class _EbookReaderScreenState extends State<EbookReaderScreen> {
                 },
               ),
             ),
-            if (_chrome) _bottomBar(context, c, paper, page, fraction, pageLabel),
+            if (!widget.embedded && _chrome)
+              _bottomBar(context, c, paper, page, fraction, pageLabel),
           ],
-        ),
-      ),
+        );
+
+    if (widget.embedded) {
+      return ColoredBox(
+        color: paper.background,
+        child: body,
+      );
+    }
+
+    return Scaffold(
+      backgroundColor: paper.background,
+      body: SafeArea(child: body),
     );
+  }
+
+  String? get pageLabelForChrome {
+    if (_pages.isEmpty) return null;
+    return 'Page ${_pageIndex + 1} of ${_pages.length}';
+  }
+
+  String? get chapterTitleForChrome {
+    if (_pages.isEmpty) return null;
+    return _pages[_pageIndex.clamp(0, _pages.length - 1)].chapterTitle;
+  }
+
+  void _refreshReaderHostLabels() {
+    final host = _controller?.readerPageHost;
+    if (host == null) return;
+    host.pageLabel = pageLabelForChrome;
+    host.chapterTitle = chapterTitleForChrome;
+    _controller?.notifyListeners();
   }
 
   Future<void> _showReaderMenu(FlickController c) async {

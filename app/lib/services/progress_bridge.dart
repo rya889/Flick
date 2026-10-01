@@ -74,6 +74,33 @@ ShortPlace? placeForShort(List<ShortPlace> places, int shortIndex) {
   return null;
 }
 
+/// Map Story karaoke word index onto a paginated page (same passage).
+int storyKaraokeWordInPage(
+  String pageText,
+  String shortText,
+  int karaokeWord,
+) {
+  if (karaokeWord < 0) return -1;
+  final pageWords =
+      pageText.split(RegExp(r'\s+')).where((w) => w.isNotEmpty).toList();
+  final shortWords =
+      shortText.split(RegExp(r'\s+')).where((w) => w.isNotEmpty).toList();
+  if (pageWords.isEmpty || shortWords.isEmpty) return -1;
+  for (var i = 0; i <= pageWords.length - shortWords.length; i++) {
+    var match = true;
+    for (var j = 0; j < shortWords.length; j++) {
+      if (pageWords[i + j] != shortWords[j]) {
+        match = false;
+        break;
+      }
+    }
+    if (match) {
+      return i + karaokeWord.clamp(0, shortWords.length - 1);
+    }
+  }
+  return -1;
+}
+
 ReaderLocation? readerLocationForShort({
   required String bookId,
   required List<ReaderChapter> chapters,

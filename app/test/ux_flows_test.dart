@@ -34,6 +34,13 @@ void main() {
     expect(blockImport(BookSource.sample, premium: false, importedBooks: 99), isNull);
   });
 
+  test('story karaoke maps onto paginated page words', () {
+    const page =
+        'First passage of the book. Second passage of the book.';
+    const short = 'Second passage of the book.';
+    expect(storyKaraokeWordInPage(page, short, 1), 6);
+  });
+
   test('reader place and flick short stay on the same passage', () {
     const chapters = [
       ReaderChapter(index: 0, title: 'Chapter 1', text: 'First passage of the book.'),

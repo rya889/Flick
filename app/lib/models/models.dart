@@ -8,6 +8,9 @@ enum TldrSubmode { condense, summary, quotes }
 
 enum ThemePreference { system, light, dark }
 
+/// Story shorts (reel) vs paginated ebook surface — same book, shared place.
+enum ReadingLayout { shorts, pages }
+
 class LibraryBook {
   LibraryBook({
     required this.id,

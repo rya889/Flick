@@ -2,11 +2,10 @@ import 'package:flutter/material.dart';
 import 'package:provider/provider.dart';
 
 import '../models/models.dart';
-import '../services/listen_cap.dart';
 import '../state/flick_controller.dart';
 import 'house_pro_prompt.dart';
-import 'paywall_sheet.dart';
-import 'settings_sheet.dart';
+import 'ebook_reader.dart';
+import 'reading_chrome.dart';
 import 'shell.dart';
 
 class NowPlayer extends StatefulWidget {
@@ -91,152 +90,102 @@ class _NowPlayerState extends State<NowPlayer> {
       if (!_syncingPage) _syncControllerToPage(c);
     });
 
+    final host = c.readerPageHost;
+
     return Column(
       children: [
-        Padding(
-          padding: const EdgeInsets.fromLTRB(12, 2, 4, 0),
-          child: Column(
-            children: [
-              Row(
-                crossAxisAlignment: CrossAxisAlignment.center,
-                children: [
-                  Expanded(
-                    child: Column(
-                      crossAxisAlignment: CrossAxisAlignment.start,
-                      children: [
-                        Text(
-                          item.book.title,
-                          maxLines: 1,
-                          overflow: TextOverflow.ellipsis,
-                          style: Theme.of(context).textTheme.titleLarge,
-                        ),
-                        Text(
-                          c.playing ? 'Playing' : 'Paused · tap to play',
-                          style: Theme.of(context).textTheme.bodySmall,
-                        ),
-                      ],
-                    ),
-                  ),
-                  IconButton(
-                    visualDensity: VisualDensity.compact,
-                    tooltip: c.playing ? 'Pause' : 'Play',
-                    onPressed: c.togglePlay,
-                    icon: Icon(
-                      c.playing ? Icons.pause_circle : Icons.play_circle,
-                      size: 32,
-                    ),
-                  ),
-                ],
-              ),
-              const SizedBox(height: 4),
-              const ChapterPips(),
-              const SizedBox(height: 2),
-              Row(
-                children: [
-                  IconButton(
-                    visualDensity: VisualDensity.compact,
-                    padding: const EdgeInsets.all(4),
-                    constraints: const BoxConstraints(minWidth: 36, minHeight: 36),
-                    onPressed: c.playMode == PlayMode.story
-                        ? () => c.jumpChapter(-1)
-                        : null,
-                    icon: const Icon(Icons.chevron_left, size: 22),
-                    tooltip: 'Previous chapter',
-                  ),
-                  Expanded(
-                    child: Text(
-                      item.short.chapterTitle,
-                      textAlign: TextAlign.center,
-                      maxLines: 1,
-                      overflow: TextOverflow.ellipsis,
-                      style: Theme.of(context).textTheme.labelLarge,
-                    ),
-                  ),
-                  IconButton(
-                    visualDensity: VisualDensity.compact,
-                    padding: const EdgeInsets.all(4),
-                    constraints: const BoxConstraints(minWidth: 36, minHeight: 36),
-                    onPressed: c.playMode == PlayMode.story
-                        ? () => c.jumpChapter(1)
-                        : null,
-                    icon: const Icon(Icons.chevron_right, size: 22),
-                    tooltip: 'Next chapter',
-                  ),
-                ],
-              ),
-            ],
-          ),
+        ReadingChrome(
+          item: item,
+          pageLabel: host?.pageLabel,
+          chapterTitle: host?.chapterTitle ?? item.short.chapterTitle,
+          onShowChapters: () async {
+            await host?.showChapters?.call();
+          },
+          onShowReaderMenu: () async {
+            await host?.showReaderMenu?.call();
+          },
         ),
         Expanded(
-          child: Stack(
+          child: IndexedStack(
+            index: c.readingLayout == ReadingLayout.pages ? 1 : 0,
             children: [
-              PageView.builder(
-                controller: _pageController,
-                scrollDirection: Axis.vertical,
-                itemCount: c.queue.length,
-                onPageChanged: (index) {
-                  if (_syncingPage) return;
-                  c.goToIndex(index);
-                },
-                itemBuilder: (context, index) {
-                  final feed = c.queue[index];
-                  final active = index == c.queueIndex;
-                  final text = active
-                      ? c.displayText
-                      : feed.short.original;
-                  return GestureDetector(
-                    behavior: HitTestBehavior.opaque,
-                    onDoubleTap: () => c.toggleHeart(feed.short.id),
-                    onTapUp: (details) {
-                      final width = MediaQuery.sizeOf(context).width;
-                      final x = details.globalPosition.dx;
-                      if (x < width * 0.28) {
-                        c.prevShort();
-                      } else if (x > width * 0.72) {
-                        c.nextShort();
-                      } else {
-                        c.togglePlay();
-                      }
+              Stack(
+                children: [
+                  PageView.builder(
+                    controller: _pageController,
+                    scrollDirection: Axis.vertical,
+                    itemCount: c.queue.length,
+                    onPageChanged: (index) {
+                      if (_syncingPage) return;
+                      c.goToIndex(index);
                     },
-                    child: Padding(
-                      padding: const EdgeInsets.fromLTRB(10, 4, 10, 6),
-                      child: SizedBox.expand(
-                        child: DecoratedBox(
-                          decoration: BoxDecoration(
-                            color: Theme.of(context).colorScheme.surface,
-                            borderRadius: BorderRadius.circular(16),
-                            border: Border.all(
-                              color: Theme.of(context)
-                                  .colorScheme
-                                  .onSurface
-                                  .withValues(alpha: 0.08),
-                            ),
-                          ),
-                          child: SingleChildScrollView(
-                            padding: const EdgeInsets.fromLTRB(14, 14, 14, 14),
-                            child: KaraokeText(
-                            text: text,
-                            activeIndex: active
-                                ? c.karaokeWord
-                                : wordsOf(text).length,
+                    itemBuilder: (context, index) {
+                      final feed = c.queue[index];
+                      final active = index == c.queueIndex;
+                      final text = active
+                          ? c.displayText
+                          : feed.short.original;
+                      return GestureDetector(
+                        behavior: HitTestBehavior.opaque,
+                        onDoubleTap: () => c.toggleHeart(feed.short.id),
+                        onTapUp: (details) {
+                          final width = MediaQuery.sizeOf(context).width;
+                          final x = details.globalPosition.dx;
+                          if (x < width * 0.28) {
+                            c.prevShort();
+                          } else if (x > width * 0.72) {
+                            c.nextShort();
+                          } else {
+                            c.togglePlay();
+                          }
+                        },
+                        child: Padding(
+                          padding: const EdgeInsets.fromLTRB(10, 4, 10, 6),
+                          child: SizedBox.expand(
+                            child: DecoratedBox(
+                              decoration: BoxDecoration(
+                                color: Theme.of(context).colorScheme.surface,
+                                borderRadius: BorderRadius.circular(16),
+                                border: Border.all(
+                                  color: Theme.of(context)
+                                      .colorScheme
+                                      .onSurface
+                                      .withValues(alpha: 0.08),
+                                ),
+                              ),
+                              child: SingleChildScrollView(
+                                padding: const EdgeInsets.fromLTRB(14, 14, 14, 14),
+                                child: KaraokeText(
+                                  text: text,
+                                  activeIndex: active
+                                      ? c.karaokeWord
+                                      : wordsOf(text).length,
+                                ),
+                              ),
                             ),
                           ),
                         ),
-                      ),
+                      );
+                    },
+                  ),
+                  const HeartBurstOverlay(),
+                  if (c.showFinishCelebration) const _FinishCelebrationOverlay(),
+                  if (!c.playing)
+                    const IgnorePointer(
+                      child: _PausePlayOverlay(),
                     ),
-                  );
-                },
+                ],
               ),
-              const HeartBurstOverlay(),
-              if (c.showFinishCelebration) const _FinishCelebrationOverlay(),
-              if (!c.playing)
-                const IgnorePointer(
-                  child: _PausePlayOverlay(),
-                ),
+              ReaderPagePane(book: item.book, embedded: true),
             ],
           ),
         ),
-        _ChromeBar(item: item),
+        ReadingActionBar(
+          item: item,
+          onShowReaderMenu: () async {
+            await host?.showReaderMenu?.call();
+          },
+        ),
       ],
     );
   }
@@ -265,160 +214,6 @@ class _PausePlayOverlay extends StatelessWidget {
             color: scheme.onPrimary,
           ),
         ),
-      ),
-    );
-  }
-}
-
-String _formatSpeed(double speed) {
-  if (speed == speed.roundToDouble()) return speed.toStringAsFixed(0);
-  return speed.toStringAsFixed(2).replaceFirst(RegExp(r'0+$'), '').replaceFirst(RegExp(r'\.$'), '');
-}
-
-class _ChromeBar extends StatelessWidget {
-  const _ChromeBar({required this.item});
-  final FeedItem item;
-
-  @override
-  Widget build(BuildContext context) {
-    final c = context.watch<FlickController>();
-    final hearted = c.hearts.contains(item.short.id);
-    final saved = c.saves.contains(item.short.id);
-
-    final listenLabel = !c.plusActive
-        ? (c.listenCapped
-            ? 'Listen cap — Pro'
-            : formatListenRemaining(c.listenRemainingSeconds))
-        : null;
-
-    return Container(
-      padding: const EdgeInsets.fromLTRB(8, 4, 8, 4),
-      decoration: BoxDecoration(
-        color: Theme.of(context).colorScheme.surface,
-        border: Border(
-          top: BorderSide(
-            color: Theme.of(context).colorScheme.onSurface.withValues(alpha: 0.08),
-          ),
-        ),
-      ),
-      child: Column(
-        mainAxisSize: MainAxisSize.min,
-        children: [
-          Row(
-            children: [
-              if (listenLabel != null)
-                Expanded(
-                  child: Text(
-                    listenLabel,
-                    maxLines: 1,
-                    overflow: TextOverflow.ellipsis,
-                    style: Theme.of(context).textTheme.labelSmall,
-                  ),
-                )
-              else
-                const Spacer(),
-              IconButton(
-                visualDensity: VisualDensity.compact,
-                padding: const EdgeInsets.all(6),
-                constraints: const BoxConstraints(minWidth: 36, minHeight: 36),
-                tooltip: c.muted ? 'Unmute / Listen' : 'Mute',
-                onPressed: () async {
-                  final ok = await c.toggleMute();
-                  if (!context.mounted) return;
-                  if (!ok) {
-                    await showPaywallSheet(
-                      context,
-                      reason: PaywallReason.listenCap,
-                    );
-                    return;
-                  }
-                  if (!c.muted && c.listenVoiceIsBasic && !c.plusActive) {
-                    ScaffoldMessenger.of(context).showSnackBar(
-                      SnackBar(
-                        content: const Text(
-                          'Basic Listen voice on free tier. Pro unlocks enhanced on-device voices.',
-                        ),
-                        action: SnackBarAction(
-                          label: 'Pro',
-                          onPressed: () => showHouseProPrompt(
-                            context,
-                            placement: HouseProPlacement.voiceTease,
-                          ),
-                        ),
-                      ),
-                    );
-                  }
-                },
-                icon: Icon(
-                  c.muted ? Icons.volume_off : Icons.volume_up,
-                  size: 22,
-                ),
-              ),
-              PopupMenuButton<double>(
-                tooltip: 'Speed',
-                padding: EdgeInsets.zero,
-                initialValue: c.playbackSpeed,
-                onSelected: (v) => c.setPlaybackSpeed(v),
-                itemBuilder: (context) => [
-                  for (final speed in const [0.75, 1.0, 1.25, 1.5, 2.0, 2.5, 3.0])
-                    CheckedPopupMenuItem(
-                      value: speed,
-                      checked: (c.playbackSpeed - speed).abs() < 0.01,
-                      child: Text('${_formatSpeed(speed)}x'),
-                    ),
-                ],
-                child: Padding(
-                  padding: const EdgeInsets.symmetric(horizontal: 6, vertical: 6),
-                  child: Text(
-                    '${_formatSpeed(c.playbackSpeed)}x',
-                    style: Theme.of(context).textTheme.labelLarge,
-                  ),
-                ),
-              ),
-              IconButton(
-                visualDensity: VisualDensity.compact,
-                padding: const EdgeInsets.all(6),
-                constraints: const BoxConstraints(minWidth: 36, minHeight: 36),
-                tooltip: 'Settings',
-                onPressed: () => showSettingsSheet(context),
-                icon: const Icon(Icons.settings_outlined, size: 22),
-              ),
-            ],
-          ),
-          Row(
-            mainAxisAlignment: MainAxisAlignment.spaceEvenly,
-            children: [
-              IconButton(
-                visualDensity: VisualDensity.compact,
-                padding: const EdgeInsets.all(6),
-                constraints: const BoxConstraints(minWidth: 40, minHeight: 36),
-                onPressed: () => c.toggleHeart(),
-                icon: Icon(
-                  hearted ? Icons.favorite : Icons.favorite_border,
-                  size: 22,
-                  color: hearted ? Theme.of(context).colorScheme.primary : null,
-                ),
-              ),
-              IconButton(
-                visualDensity: VisualDensity.compact,
-                padding: const EdgeInsets.all(6),
-                constraints: const BoxConstraints(minWidth: 40, minHeight: 36),
-                onPressed: () => c.toggleSave(),
-                icon: Icon(
-                  saved ? Icons.bookmark : Icons.bookmark_border,
-                  size: 22,
-                ),
-              ),
-              IconButton(
-                visualDensity: VisualDensity.compact,
-                padding: const EdgeInsets.all(6),
-                constraints: const BoxConstraints(minWidth: 40, minHeight: 36),
-                onPressed: () => c.shareCurrent(),
-                icon: const Icon(Icons.ios_share, size: 22),
-              ),
-            ],
-          ),
-        ],
       ),
     );
   }

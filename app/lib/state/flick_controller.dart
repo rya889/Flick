@@ -25,6 +25,21 @@ class FeedItem {
   final ShortSegment short;
 }
 
+/// Wired by [ReaderPagePane] while embedded on the Now tab.
+class ReaderPageHostActions {
+  ReaderPageHostActions({
+    this.showChapters,
+    this.showReaderMenu,
+    this.pageLabel,
+    this.chapterTitle,
+  });
+
+  Future<void> Function()? showChapters;
+  Future<void> Function()? showReaderMenu;
+  String? pageLabel;
+  String? chapterTitle;
+}
+
 class FlickController extends ChangeNotifier {
   FlickController(
     this._store, {
@@ -78,6 +93,7 @@ class FlickController extends ChangeNotifier {
   ReaderPaper readerPaper = ReaderPaper.paper;
   bool readerFollowAlong = false;
   bool readerOpen = false;
+  ReadingLayout readingLayout = ReadingLayout.shorts;
   int readerSpokenWord = -1;
   int readerPageFinishedGen = 0;
   int _readerSpeakGen = 0;
@@ -97,6 +113,7 @@ class FlickController extends ChangeNotifier {
   String? listenVoiceLabel;
   bool listenVoiceIsBasic = true;
   List<SpokenVoice> listenVoices = const [];
+  ReaderPageHostActions? readerPageHost;
 
   PlusService get plusService => _plus;
 
@@ -381,6 +398,7 @@ class FlickController extends ChangeNotifier {
     queueIndex = resume.clamp(0, max(0, queue.length - 1));
     await _store.setLastBookId(book.id);
     tabIndex = 0;
+    readingLayout = ReadingLayout.shorts;
     playing = false;
     _readerUtterance = false;
     _karaokeTimer?.cancel();
@@ -388,6 +406,41 @@ class FlickController extends ChangeNotifier {
     _resetKaraoke();
     notifyListeners();
     unawaited(ensureAiTldrForCurrent());
+  }
+
+  double get bookProgressFraction {
+    if (queue.isEmpty) return 0;
+    if (queue.length <= 1) return 1;
+    return queueIndex / (queue.length - 1);
+  }
+
+  Future<void> setReadingLayout(ReadingLayout layout) async {
+    if (readingLayout == layout) return;
+    await _syncReadingLayoutSwitch(layout);
+    readingLayout = layout;
+    readerOpen = layout == ReadingLayout.pages;
+    notifyListeners();
+  }
+
+  Future<void> openBookInPages(LibraryBook book, {int? shortIndex}) async {
+    await openBook(book, shortIndex: shortIndex);
+    await setReadingLayout(ReadingLayout.pages);
+  }
+
+  Future<void> _syncReadingLayoutSwitch(ReadingLayout target) async {
+    final book = activeBook;
+    if (book == null) return;
+    if (target == ReadingLayout.pages) {
+      await _mirrorReaderFromCurrentShort();
+      return;
+    }
+    final loc = readerLocations[book.id];
+    if (loc == null) return;
+    await _mirrorShortFromReader(loc);
+    final idx = progress[book.id]?.shortIndex;
+    if (idx != null && queue.isNotEmpty) {
+      queueIndex = idx.clamp(0, queue.length - 1);
+    }
   }
 
   Future<void> openBartlebyStory() async {
@@ -749,26 +802,36 @@ class FlickController extends ChangeNotifier {
     notifyListeners();
   }
 
-  void beginReaderSession() {
+  void beginReaderSession({bool stopStoryAudio = true}) {
     readerOpen = true;
-    playing = false;
-    _karaokeTimer?.cancel();
-    unawaited(_tts.stop());
+    readingLayout = ReadingLayout.pages;
+    if (stopStoryAudio) {
+      playing = false;
+      _karaokeTimer?.cancel();
+      unawaited(_tts.stop());
+    }
     notifyListeners();
   }
 
-  void endReaderSession(String bookId) {
+  void endReaderSession(
+    String bookId, {
+    bool leavePagesLayout = true,
+    bool stopAudio = true,
+  }) {
     readerOpen = false;
-    _readerSpeakGen += 1;
-    _readerUtterance = false;
-    readerSpokenWord = -1;
-    unawaited(_tts.stop());
+    if (leavePagesLayout) {
+      readingLayout = ReadingLayout.shorts;
+    }
+    if (_readerUtterance || readerFollowAlong) {
+      _readerSpeakGen += 1;
+      _readerUtterance = false;
+      readerSpokenWord = -1;
+      if (stopAudio) unawaited(_tts.stop());
+    }
     final prog = progress[bookId];
     if (prog != null && activeBook?.id == bookId && queue.isNotEmpty) {
       queueIndex = prog.shortIndex.clamp(0, queue.length - 1);
     }
-    playing = false;
-    _karaokeTimer?.cancel();
     notifyListeners();
   }
 
@@ -1217,7 +1280,7 @@ class FlickController extends ChangeNotifier {
 
   Future<void> _mirrorReaderFromCurrentShort() async {
     final item = current;
-    if (item == null || playMode != PlayMode.story || readerOpen) return;
+    if (item == null || playMode != PlayMode.story) return;
     final chapters = chaptersForBook(
       item.book,
       stored: await _store.loadChapterSpans(item.book.id),
