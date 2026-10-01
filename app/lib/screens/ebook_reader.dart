@@ -11,6 +11,7 @@ import '../services/page_text.dart';
 import '../services/progress_bridge.dart';
 import '../services/tts_voice.dart';
 import '../state/flick_controller.dart';
+import '../widgets/reader_margin_taps.dart';
 import 'house_pro_prompt.dart';
 
 /// Full-screen route wrapper (Library). Prefer Now tab + [ReadingLayout.pages].
@@ -56,7 +57,7 @@ class _ReaderPagePaneState extends State<ReaderPagePane> {
   FlickController? _controller;
   bool _pageTurnInFlight = false;
   DateTime _lastPageTurnAt = DateTime.fromMillisecondsSinceEpoch(0);
-  static const _pageTurnCooldown = Duration(milliseconds: 420);
+  static const _pageTurnCooldown = Duration(milliseconds: 750);
 
   @override
   void initState() {
@@ -249,16 +250,6 @@ class _ReaderPagePaneState extends State<ReaderPagePane> {
     );
   }
 
-  void _onTapZone(_ReaderTapZone zone) {
-    switch (zone) {
-      case _ReaderTapZone.previous:
-        unawaited(_goRelative(-1));
-      case _ReaderTapZone.next:
-        unawaited(_goRelative(1));
-      case _ReaderTapZone.center:
-        setState(() => _chrome = !_chrome);
-    }
-  }
 
   Future<void> _goRelative(int delta) async {
     final controller = _pageController;
@@ -480,6 +471,14 @@ class _ReaderPagePaneState extends State<ReaderPagePane> {
     if (picked == null || _pageController == null) return;
     final index = _pages.indexWhere((p) => p.chapterIndex == picked);
     if (index < 0) return;
+    final c = _controller;
+    if (c != null) {
+      final shorts = c.shortsByBook[widget.book.id] ?? const <ShortSegment>[];
+      final shortIdx = shorts.indexWhere((s) => s.chapterIndex == picked);
+      if (shortIdx >= 0) {
+        c.goToIndex(shortIdx);
+      }
+    }
     await _pageController!.animateToPage(
       index,
       duration: const Duration(milliseconds: 240),
@@ -570,7 +569,12 @@ class _ReaderPagePaneState extends State<ReaderPagePane> {
                           );
                         },
                       ),
-                      _ReaderTapLanes(onZoneTap: _onTapZone),
+                      ReaderMarginTapLayer(
+                        onPrevious: () => unawaited(_goRelative(-1)),
+                        onNext: () => unawaited(_goRelative(1)),
+                        onCenterTap: () =>
+                            setState(() => _chrome = !_chrome),
+                      ),
                     ],
                   );
                 },
@@ -888,44 +892,6 @@ class _ReaderPagePaneState extends State<ReaderPagePane> {
           ),
         ],
       ),
-    );
-  }
-}
-
-enum _ReaderTapZone { previous, center, next }
-
-/// Kindle-style margins: tap left/right to turn; center toggles chrome.
-class _ReaderTapLanes extends StatelessWidget {
-  const _ReaderTapLanes({required this.onZoneTap});
-
-  final void Function(_ReaderTapZone zone) onZoneTap;
-
-  @override
-  Widget build(BuildContext context) {
-    return Row(
-      children: [
-        Expanded(
-          flex: 26,
-          child: GestureDetector(
-            behavior: HitTestBehavior.translucent,
-            onTap: () => onZoneTap(_ReaderTapZone.previous),
-          ),
-        ),
-        Expanded(
-          flex: 48,
-          child: GestureDetector(
-            behavior: HitTestBehavior.translucent,
-            onTap: () => onZoneTap(_ReaderTapZone.center),
-          ),
-        ),
-        Expanded(
-          flex: 26,
-          child: GestureDetector(
-            behavior: HitTestBehavior.translucent,
-            onTap: () => onZoneTap(_ReaderTapZone.next),
-          ),
-        ),
-      ],
     );
   }
 }

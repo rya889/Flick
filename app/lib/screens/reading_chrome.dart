@@ -73,79 +73,52 @@ class ReadingChrome extends StatelessWidget {
         ),
         Padding(
           padding: const EdgeInsets.symmetric(horizontal: 12),
-          child: SegmentedButton<ReadingLayout>(
-            segments: const [
-              ButtonSegment(
-                value: ReadingLayout.shorts,
-                label: Text('Shorts'),
-                icon: Icon(Icons.view_agenda_outlined, size: 18),
+          child: Row(
+            children: [
+              Expanded(
+                child: SegmentedButton<ReadingLayout>(
+                  segments: const [
+                    ButtonSegment(
+                      value: ReadingLayout.shorts,
+                      label: Text('Shorts'),
+                      icon: Icon(Icons.view_agenda_outlined, size: 18),
+                    ),
+                    ButtonSegment(
+                      value: ReadingLayout.pages,
+                      label: Text('Pages'),
+                      icon: Icon(Icons.menu_book_outlined, size: 18),
+                    ),
+                  ],
+                  selected: {c.readingLayout},
+                  onSelectionChanged: (set) {
+                    c.setReadingLayout(set.first);
+                  },
+                ),
               ),
-              ButtonSegment(
-                value: ReadingLayout.pages,
-                label: Text('Pages'),
-                icon: Icon(Icons.menu_book_outlined, size: 18),
+              const SizedBox(width: 8),
+              IconButton.filledTonal(
+                tooltip: 'Chapters',
+                onPressed: onShowChapters,
+                icon: const Icon(Icons.list_alt_outlined),
               ),
             ],
-            selected: {c.readingLayout},
-            onSelectionChanged: (set) {
-              final layout = set.first;
-              c.setReadingLayout(layout);
-            },
           ),
         ),
         const SizedBox(height: 4),
         const ChapterPips(),
         const SizedBox(height: 2),
         Padding(
-          padding: const EdgeInsets.symmetric(horizontal: 4),
-          child: Row(
-            children: [
-              IconButton(
-                visualDensity: VisualDensity.compact,
-                padding: const EdgeInsets.all(4),
-                constraints: const BoxConstraints(minWidth: 36, minHeight: 36),
-                onPressed: c.playMode == PlayMode.story
-                    ? () => c.jumpChapter(-1)
-                    : null,
-                icon: const Icon(Icons.chevron_left, size: 22),
-                tooltip: 'Previous chapter',
-              ),
-              Expanded(
-                child: InkWell(
-                  borderRadius: BorderRadius.circular(8),
-                  onTap: onShowChapters,
-                  child: Padding(
-                    padding: const EdgeInsets.symmetric(vertical: 6),
-                    child: Column(
-                      children: [
-                        Text(
-                          chapterTitle ?? item.short.chapterTitle,
-                          textAlign: TextAlign.center,
-                          maxLines: 1,
-                          overflow: TextOverflow.ellipsis,
-                          style: Theme.of(context).textTheme.labelLarge,
-                        ),
-                        if (pageLabel != null && c.readingLayout == ReadingLayout.pages)
-                          Text(
-                            pageLabel!,
-                            style: Theme.of(context).textTheme.labelSmall,
-                          ),
-                      ],
-                    ),
-                  ),
-                ),
-              ),
-              IconButton(
-                visualDensity: VisualDensity.compact,
-                padding: const EdgeInsets.all(4),
-                constraints: const BoxConstraints(minWidth: 36, minHeight: 36),
-                onPressed: c.playMode == PlayMode.story
-                    ? () => c.jumpChapter(1)
-                    : null,
-                icon: const Icon(Icons.chevron_right, size: 22),
-                tooltip: 'Next chapter',
-              ),
-            ],
+          padding: const EdgeInsets.symmetric(horizontal: 16),
+          child: Text(
+            [
+              chapterTitle ?? item.short.chapterTitle,
+              if (pageLabel != null && c.readingLayout == ReadingLayout.pages)
+                pageLabel!,
+            ].join(' · '),
+            textAlign: TextAlign.center,
+            maxLines: 2,
+            overflow: TextOverflow.ellipsis,
+            style: Theme.of(context).textTheme.labelLarge,
           ),
         ),
         Padding(

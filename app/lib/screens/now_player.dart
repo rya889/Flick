@@ -4,6 +4,7 @@ import 'package:provider/provider.dart';
 import '../models/models.dart';
 import '../state/flick_controller.dart';
 import 'house_pro_prompt.dart';
+import '../widgets/reader_margin_taps.dart';
 import 'ebook_reader.dart';
 import 'reading_chrome.dart';
 import 'shell.dart';
@@ -114,6 +115,7 @@ class _NowPlayerState extends State<NowPlayer> {
                   PageView.builder(
                     controller: _pageController,
                     scrollDirection: Axis.vertical,
+                    physics: const NeverScrollableScrollPhysics(),
                     itemCount: c.queue.length,
                     onPageChanged: (index) {
                       if (_syncingPage) return;
@@ -125,47 +127,41 @@ class _NowPlayerState extends State<NowPlayer> {
                       final text = active
                           ? c.displayText
                           : feed.short.original;
-                      return GestureDetector(
-                        behavior: HitTestBehavior.opaque,
-                        onDoubleTap: () => c.toggleHeart(feed.short.id),
-                        onTapUp: (details) {
-                          final width = MediaQuery.sizeOf(context).width;
-                          final x = details.globalPosition.dx;
-                          if (x < width * 0.28) {
-                            c.prevShort();
-                          } else if (x > width * 0.72) {
-                            c.nextShort();
-                          } else {
-                            c.togglePlay();
-                          }
-                        },
-                        child: Padding(
-                          padding: const EdgeInsets.fromLTRB(10, 4, 10, 6),
-                          child: SizedBox.expand(
-                            child: DecoratedBox(
-                              decoration: BoxDecoration(
-                                color: Theme.of(context).colorScheme.surface,
-                                borderRadius: BorderRadius.circular(16),
-                                border: Border.all(
-                                  color: Theme.of(context)
-                                      .colorScheme
-                                      .onSurface
-                                      .withValues(alpha: 0.08),
-                                ),
+                      return Padding(
+                        padding: const EdgeInsets.fromLTRB(10, 4, 10, 6),
+                        child: SizedBox.expand(
+                          child: DecoratedBox(
+                            decoration: BoxDecoration(
+                              color: Theme.of(context).colorScheme.surface,
+                              borderRadius: BorderRadius.circular(16),
+                              border: Border.all(
+                                color: Theme.of(context)
+                                    .colorScheme
+                                    .onSurface
+                                    .withValues(alpha: 0.08),
                               ),
-                              child: SingleChildScrollView(
-                                padding: const EdgeInsets.fromLTRB(14, 14, 14, 14),
-                                child: KaraokeText(
-                                  text: text,
-                                  activeIndex: active
-                                      ? c.karaokeWord
-                                      : wordsOf(text).length,
-                                ),
+                            ),
+                            child: SingleChildScrollView(
+                              padding: const EdgeInsets.fromLTRB(14, 14, 14, 14),
+                              child: KaraokeText(
+                                text: text,
+                                activeIndex: active
+                                    ? c.karaokeWord
+                                    : wordsOf(text).length,
                               ),
                             ),
                           ),
                         ),
                       );
+                    },
+                  ),
+                  ReaderMarginTapLayer(
+                    onPrevious: c.prevShort,
+                    onNext: c.nextShort,
+                    onCenterTap: c.togglePlay,
+                    onCenterDoubleTap: () {
+                      final id = c.current?.short.id;
+                      if (id != null) c.toggleHeart(id);
                     },
                   ),
                   const HeartBurstOverlay(),
