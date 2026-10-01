@@ -34,10 +34,10 @@ Replace blank or ambiguous screens with brief next actions that get a new user t
 - New catalog behavior or analytics overhaul.
 
 ## Acceptance tests
-- [ ] A fresh install has a clear path to Bartleby in one tap or obvious next step.
-- [ ] Empty/error states never look like a broken or paid-only library.
-- [ ] Existing users with books see no onboarding interruption.
-- [ ] Offline state offers a useful local action.
+- [x] A fresh install has a clear path to Bartleby in one tap or obvious next step.
+- [x] Empty/error states never look like a broken or paid-only library.
+- [x] Existing users with books see no onboarding interruption.
+- [x] Offline state offers a useful local action.
 
 ## Files likely touched
 - `app/lib/screens/library_screen.dart`

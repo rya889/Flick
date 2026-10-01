@@ -3,6 +3,7 @@ import 'package:provider/provider.dart';
 
 import '../services/gutenberg_catalog.dart';
 import '../state/flick_controller.dart';
+import '../widgets/library_empty_states.dart';
 
 class PdCatalogScreen extends StatefulWidget {
   const PdCatalogScreen({super.key});
@@ -18,6 +19,7 @@ class _PdCatalogScreenState extends State<PdCatalogScreen> {
   bool _loading = false;
   String? _error;
   String? _importingId;
+  bool _hasSearched = false;
 
   @override
   void dispose() {
@@ -34,12 +36,20 @@ class _PdCatalogScreenState extends State<PdCatalogScreen> {
     try {
       final books = await _client.search(query: _searchController.text);
       if (!mounted) return;
-      setState(() => _results = books);
+      setState(() {
+        _results = books;
+        _hasSearched = true;
+      });
     } catch (e) {
       if (!mounted) return;
       setState(() => _error = e.toString());
     } finally {
-      if (mounted) setState(() => _loading = false);
+      if (mounted) {
+        setState(() {
+          _loading = false;
+          _hasSearched = true;
+        });
+      }
     }
   }
 
@@ -89,11 +99,19 @@ class _PdCatalogScreenState extends State<PdCatalogScreen> {
           if (_loading) const LinearProgressIndicator(),
           if (_error != null)
             Padding(
-              padding: const EdgeInsets.all(16),
-              child: Text(_error!, style: TextStyle(color: Theme.of(context).colorScheme.error)),
+              padding: const EdgeInsets.fromLTRB(16, 0, 16, 8),
+              child: InlineErrorBanner(
+                message:
+                    'Could not reach the catalog. Your seed shelf still works offline.',
+                onRetry: _search,
+              ),
             ),
           Expanded(
-            child: ListView.builder(
+            child: _hasSearched && !_loading && _results.isEmpty && _error == null
+                ? CatalogEmptyResults(
+                    onTrySamples: () => Navigator.of(context).pop(),
+                  )
+                : ListView.builder(
               itemCount: _results.length,
               itemBuilder: (context, index) {
                 final book = _results[index];
