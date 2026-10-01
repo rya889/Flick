@@ -3,36 +3,47 @@
 #
 #   cd ~/dev/Flick && bash scripts/to-simulator.sh
 #
-# Requires: full Xcode (not only Command Line Tools) + iOS Simulator runtime.
-#   xcode-select -p   # should be .../Xcode.app/Contents/Developer
-#   flutter doctor
-#
-# Sync discards uncommitted local edits on tracked files (like to-phone.sh).
+# Logs: .flick/last-to-simulator.log
+# On failure, prints a "COPY FOR CURSOR AGENT" block (errors highlighted in red).
 #
 # Optional:
 #   FLICK_SIMULATOR="iPhone 17 Pro" bash scripts/to-simulator.sh
-#   FLICK_KEEP_LOCAL=1 bash scripts/to-simulator.sh
-#   FLICK_TEST=1 bash scripts/to-simulator.sh
-#   FLICK_FALLBACK_MACOS=1 bash scripts/to-simulator.sh   # if no iOS sim (not ideal)
+#   FLICK_VERBOSE=1 bash scripts/to-simulator.sh      # show noisy lines too
+#   FLICK_FULL_LOG=1 bash scripts/to-simulator.sh    # no error filtering on flutter output
+#   FLICK_KEEP_LOCAL=1 | FLICK_TEST=1 | FLICK_FALLBACK_MACOS=1
 set -euo pipefail
 
 ROOT="$(cd "$(dirname "$0")/.." && pwd)"
+# shellcheck source=lib/agent-report.sh
+source "$ROOT/scripts/lib/agent-report.sh"
+
 cd "$ROOT"
+flick_report_init "to-simulator"
 
 BRANCH="${FLICK_BRANCH:-main}"
 SIM_NAME="${FLICK_SIMULATOR:-}"
+LAST_STEP="init"
 
-echo "==> Flick → iOS Simulator"
-echo "    branch: $BRANCH"
+fail() {
+  local code="${1:-1}"
+  local step="${2:-$LAST_STEP}"
+  flick_emit_agent_block "$code" "$step"
+  exit "$code"
+}
 
-echo "==> Sync to origin/$BRANCH"
+if [[ "${FLICK_VERBOSE:-}" == "1" ]]; then
+  set -x
+fi
+
+LAST_STEP="git sync"
+flick_log "Flick → iOS Simulator (branch $BRANCH)"
 git fetch origin "$BRANCH"
 git checkout "$BRANCH"
 if [[ "${FLICK_KEEP_LOCAL:-}" == "1" ]]; then
-  echo "    (keeping local commits — pull --rebase)"
+  flick_log "pull --rebase origin/$BRANCH"
   git pull --rebase origin "$BRANCH"
 else
-  echo "    (local code edits on tracked files are discarded)"
+  flick_log "reset --hard origin/$BRANCH"
   git reset --hard "origin/$BRANCH"
   git clean -fd
 fi
@@ -42,38 +53,37 @@ if [[ -x "$ROOT/scripts/strip-swiftuicore-linker.sh" ]]; then
 fi
 
 cd "$ROOT/app"
-echo "==> flutter pub get"
-flutter pub get
+LAST_STEP="flutter pub get"
+flick_log "flutter pub get"
+flutter pub get || fail $? "flutter pub get"
 
 if [[ "${FLICK_TEST:-}" == "1" ]]; then
-  echo "==> flutter test"
-  flutter test
+  LAST_STEP="flutter test"
+  flick_log "flutter test"
+  flutter test || fail $? "flutter test"
 fi
 
 if [[ ! -d ios/Pods || ! -f ios/Podfile.lock ]]; then
-  echo "==> pod install"
-  (cd ios && pod install)
+  LAST_STEP="pod install"
+  flick_log "pod install"
+  (cd ios && pod install) || fail $? "pod install"
 fi
 
 open_ios_simulator() {
   if flutter emulators 2>/dev/null | grep -q apple_ios_simulator; then
-    echo "==> Boot iOS Simulator (flutter emulators)"
+    flick_log "flutter emulators --launch apple_ios_simulator"
     flutter emulators --launch apple_ios_simulator || true
     return 0
   fi
 
   local sim_app="/Applications/Xcode.app/Contents/Developer/Applications/Simulator.app"
   if [[ -d "$sim_app" ]]; then
-    echo "==> Open Simulator.app (Xcode)"
+    flick_log "open Simulator.app"
     open "$sim_app"
     return 0
   fi
 
-  if open -a Simulator 2>/dev/null; then
-    echo "==> Open Simulator"
-    return 0
-  fi
-
+  open -a Simulator 2>/dev/null && return 0
   return 1
 }
 
@@ -89,7 +99,6 @@ def iphone_num(name: str) -> int:
     m = re.search(r"iPhone (\d+)", name or "")
     return int(m.group(1)) if m else 0
 
-# Prefer the newest iPhone model Flutter already sees (usually the booted sim).
 devices.sort(key=lambda d: iphone_num(d.get("name", "")), reverse=True)
 print(devices[0]["id"])
 PY
@@ -128,7 +137,7 @@ booted = [d for d in candidates if d.get("state") == "Booted"]
 if booted:
     booted.sort(key=lambda d: iphone_num(d["name"]), reverse=True)
     d = booted[0]
-    print(f'==> Using booted simulator: {d["name"]} ({d["udid"]})', flush=True)
+    print(f'Using booted simulator: {d["name"]} ({d["udid"]})', flush=True)
     raise SystemExit(0)
 
 if want:
@@ -143,7 +152,7 @@ else:
 
 udid = pick["udid"]
 name = pick["name"]
-print(f"==> Boot simulator: {name} ({udid})", flush=True)
+print(f'Boot simulator: {name} ({udid})', flush=True)
 subprocess.run(["xcrun", "simctl", "boot", udid], check=False)
 PY
 }
@@ -151,9 +160,7 @@ PY
 require_xcode_for_ios() {
   local xp
   xp="$(xcode-select -p 2>/dev/null || true)"
-  if [[ -z "$xp" ]]; then
-    return 1
-  fi
+  [[ -n "$xp" ]] || return 1
   if [[ "$xp" == *CommandLineTools* ]] && [[ ! -d /Applications/Xcode.app ]]; then
     return 1
   fi
@@ -161,46 +168,40 @@ require_xcode_for_ios() {
 }
 
 FLUTTER_DEVICE=""
-
+LAST_STEP="simulator"
 if require_xcode_for_ios; then
   open_ios_simulator || true
-  # If a sim is already booted (e.g. iPhone 17 Pro), do not boot a random older one.
+  simctl_boot_if_needed "$SIM_NAME" | while read -r line; do flick_log "$line"; done || true
+  sleep 3
   FLUTTER_DEVICE="$(pick_flutter_ios_device || true)"
-  if [[ -z "$FLUTTER_DEVICE" ]]; then
-    simctl_boot_if_needed "$SIM_NAME" || true
-    sleep 4
-    FLUTTER_DEVICE="$(pick_flutter_ios_device || true)"
-  else
-    echo "==> Flutter already sees an iOS simulator — skipping simctl boot"
-  fi
 fi
 
 if [[ -z "$FLUTTER_DEVICE" ]]; then
   if [[ "${FLICK_FALLBACK_MACOS:-}" == "1" ]]; then
-    echo "==> No iOS simulator — falling back to macOS (FLICK_FALLBACK_MACOS=1)"
+    flick_log "FLICK_FALLBACK_MACOS=1 → macos"
     FLUTTER_DEVICE="macos"
   else
-    echo "" >&2
-    echo "No iOS Simulator available for Flutter." >&2
-    echo "" >&2
-    echo "Flutter only sees:" >&2
-    flutter devices 2>/dev/null | sed 's/^/  /' >&2 || true
-    echo "" >&2
-    echo "Fix (one-time):" >&2
-    echo "  1. Install Xcode from the App Store (not only Command Line Tools)." >&2
-    echo "  2. sudo xcode-select -s /Applications/Xcode.app/Contents/Developer" >&2
-    echo "  3. sudo xcodebuild -runFirstLaunch" >&2
-    echo "  4. Xcode → Settings → Platforms → install an iOS simulator runtime." >&2
-    echo "  5. flutter doctor" >&2
-    echo "" >&2
-    echo "Then run again:  cd ~/dev/Flick && bash scripts/to-simulator.sh" >&2
-    echo "Or quick desktop smoke:  FLICK_FALLBACK_MACOS=1 bash scripts/to-simulator.sh" >&2
-    exit 1
+    flick_log "ERROR: no iOS simulator for Flutter"
+    fail 1 "no ios simulator"
   fi
 fi
 
+LAST_STEP="flutter run"
+flick_log "flutter run -d $FLUTTER_DEVICE ($(git -C "$ROOT" log -1 --oneline))"
 echo ""
-echo "Running $(git -C "$ROOT" log -1 --oneline) on $FLUTTER_DEVICE"
+echo "Tip: full log → $FLICK_REPORT_LOG"
+echo "     paste block on failure, or run: bash scripts/agent-report.sh"
 echo ""
 
-flutter run -d "$FLUTTER_DEVICE"
+RUN_EXIT=0
+if [[ "${FLICK_FULL_LOG:-}" == "1" ]]; then
+  flutter run -d "$FLUTTER_DEVICE" 2>&1 | tee -a "$FLICK_REPORT_LOG" || RUN_EXIT=$?
+else
+  flutter run -d "$FLUTTER_DEVICE" 2>&1 | tee -a "$FLICK_REPORT_LOG" | flick_run_filtered || RUN_EXIT=$?
+fi
+
+if [[ "$RUN_EXIT" != "0" ]]; then
+  fail "$RUN_EXIT" "flutter run"
+fi
+
+flick_log "done"

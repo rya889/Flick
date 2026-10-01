@@ -32,7 +32,9 @@ cd ~/dev/Flick && bash scripts/to-simulator.sh
 
 Needs **full Xcode** + an iOS simulator runtime (`flutter doctor`). Sync uses `reset --hard` on `origin/main`.
 
-Optional: `FLICK_TEST=1`; `FLICK_SIMULATOR="iPhone 16 Pro"`; `FLICK_KEEP_LOCAL=1`; `FLICK_FALLBACK_MACOS=1` if simulators are not installed yet.
+Optional: `FLICK_TEST=1`; `FLICK_SIMULATOR="iPhone 17 Pro"`; `FLICK_KEEP_LOCAL=1`; `FLICK_FALLBACK_MACOS=1`.
+
+**Debug for Cursor:** failures print a **COPY FOR CURSOR AGENT** block; full log at `.flick/last-to-simulator.log`. Anytime: `bash scripts/agent-report.sh`. Use `FLICK_VERBOSE=1` for unfiltered output; `FLICK_FULL_LOG=1` to skip error highlighting during `flutter run`.
 
 ## iPhone (physical device)
 
