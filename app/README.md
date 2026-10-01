@@ -30,7 +30,9 @@ From repo root (pulls `main`, opens Simulator, debug run):
 cd ~/dev/Flick && bash scripts/to-simulator.sh
 ```
 
-Sync matches `origin/main` with `reset --hard` (discards local edits on tracked files). Optional: `FLICK_TEST=1`; `FLICK_SIMULATOR="iPhone 16"`; `FLICK_KEEP_LOCAL=1` to `pull --rebase` instead.
+Needs **full Xcode** + an iOS simulator runtime (`flutter doctor`). Sync uses `reset --hard` on `origin/main`.
+
+Optional: `FLICK_TEST=1`; `FLICK_SIMULATOR="iPhone 16 Pro"`; `FLICK_KEEP_LOCAL=1`; `FLICK_FALLBACK_MACOS=1` if simulators are not installed yet.
 
 ## iPhone (physical device)
 
