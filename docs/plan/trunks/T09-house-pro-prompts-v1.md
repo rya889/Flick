@@ -18,7 +18,7 @@ tags: [flick, trunk, t09-house-pro-prompts-v1]
 | **ID** | `T09-house-pro-prompts-v1` |
 | **Estimate** | S |
 | **Deps** | `T08` |
-| **Status** | ready |
+| **Status** | complete |
 
 ## Goal
 Ship v1 “ads”: **house Pro soft prompts only** — Finish end, Settings, voice tease — never interrupt Listen/karaoke/Finish celebration animation.

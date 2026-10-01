@@ -18,7 +18,7 @@ tags: [flick, trunk, t07-pd-catalog-browse-import]
 | **ID** | `T07-pd-catalog-browse-import` |
 | **Estimate** | M |
 | **Deps** | `T06` (decision must exist) |
-| **Status** | ready |
+| **Status** | complete |
 
 ## Goal
 Implement the T06-chosen source enough that a user can browse PD fiction and import into the existing library pipeline.

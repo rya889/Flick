@@ -18,7 +18,7 @@ tags: [flick, trunk, t08-pro-paywall-soft]
 | **ID** | `T08-pro-paywall-soft` |
 | **Estimate** | M |
 | **Deps** | `T03` (dogfood path); ideally after T07 so catalog isn’t confused with IAP |
-| **Status** | ready |
+| **Status** | complete |
 
 ## Goal
 Align monetization UX to locked Pro **$4.99 / $29.99**, voices-in-Pro messaging, and **never gate PD chapters** — soft paywall only.

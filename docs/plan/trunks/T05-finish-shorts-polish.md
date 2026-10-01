@@ -18,7 +18,7 @@ tags: [flick, trunk, t05-finish-shorts-polish]
 | **ID** | `T05-finish-shorts-polish` |
 | **Estimate** | M |
 | **Deps** | `T03` |
-| **Status** | ready |
+| **Status** | complete |
 
 ## Goal
 Tune short segmentation and Finish UX for PD fiction snackability (~15–60s attention) without rewriting the whole player.

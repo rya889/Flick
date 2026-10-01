@@ -18,7 +18,7 @@ tags: [flick, trunk, t06-pd-library-source-research]
 | **ID** | `T06-pd-library-source-research` |
 | **Estimate** | S |
 | **Deps** | `T05` preferred so dogfood isn’t blocked; can run earlier if Ryan prioritizes catalog |
-| **Status** | ready |
+| **Status** | complete |
 
 ## Goal
 Choose how Flick gets a **broader** PD corpus beyond bundled seeds — research + decision only; no production ingest yet.

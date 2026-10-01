@@ -18,7 +18,7 @@ tags: [flick, trunk, t04-listen-polish]
 | **ID** | `T04-listen-polish` |
 | **Estimate** | M |
 | **Deps** | `T03` preferred (dogfood path exists); can follow T02 if Finish deferred |
-| **Status** | ready |
+| **Status** | complete |
 
 ## Goal
 Make on-device Listen reliable and pleasant for fiction dogfood — karaoke + mute/speed — without building cloud voices yet.
