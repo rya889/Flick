@@ -11,6 +11,8 @@ import 'ebook_reader.dart';
 import 'paywall_sheet.dart';
 import 'pd_catalog_screen.dart';
 import 'settings_sheet.dart';
+import '../widgets/flick_book_cover.dart';
+import '../widgets/library_empty_states.dart';
 import 'sync_sheet.dart';
 
 class LibraryScreen extends StatefulWidget {
@@ -104,7 +106,7 @@ class _LibraryScreenState extends State<LibraryScreen> {
         const SizedBox(height: 12),
         Expanded(
           child: c.books.isEmpty
-              ? _EmptyLibrary(
+              ? LibraryEmptyState(
                   onAddBook: () => _showAddBook(context),
                   onAddSamples: () => c.seedSamples(),
                   onStartBartleby: () => c.openBartlebyStory(),
@@ -112,6 +114,8 @@ class _LibraryScreenState extends State<LibraryScreen> {
               : ListView(
                   padding: const EdgeInsets.fromLTRB(16, 0, 16, 24),
                   children: [
+                    if (c.continueReadingBook != null)
+                      _ContinueReadingCard(book: c.continueReadingBook!),
                     if (c.books.any((b) => b.id == kBartlebySampleId))
                       _BartlebyDogfoodCard(
                         completed: c.isBookCompleted(kBartlebySampleId),
@@ -122,19 +126,19 @@ class _LibraryScreenState extends State<LibraryScreen> {
                         },
                       ),
                     Text(
-                      'Samples',
+                      'On your shelf',
+                      style: Theme.of(context).textTheme.titleMedium,
+                    ),
+                    const SizedBox(height: 8),
+                    _ShelfCoverGrid(books: c.books),
+                    const SizedBox(height: 20),
+                    Text(
+                      'Add samples',
                       style: Theme.of(context).textTheme.titleMedium,
                     ),
                     const SizedBox(height: 8),
                     for (final sample in sampleLibrary)
                       _SampleTile(sample: sample),
-                    const SizedBox(height: 20),
-                    Text(
-                      'On your shelf',
-                      style: Theme.of(context).textTheme.titleMedium,
-                    ),
-                    const SizedBox(height: 8),
-                    for (final book in c.books) _BookTile(book: book),
                   ],
                 ),
         ),
@@ -437,49 +441,155 @@ class _BartlebyDogfoodCard extends StatelessWidget {
   }
 }
 
-class _EmptyLibrary extends StatelessWidget {
-  const _EmptyLibrary({
-    required this.onAddBook,
-    required this.onAddSamples,
-    required this.onStartBartleby,
-  });
-
-  final VoidCallback onAddBook;
-  final VoidCallback onAddSamples;
-  final VoidCallback onStartBartleby;
+class _ContinueReadingCard extends StatelessWidget {
+  const _ContinueReadingCard({required this.book});
+  final LibraryBook book;
 
   @override
   Widget build(BuildContext context) {
-    return Center(
-      child: Padding(
-        padding: const EdgeInsets.all(28),
+    final c = context.watch<FlickController>();
+    final chip = c.continueReadingLabel(book.id);
+    return Padding(
+      padding: const EdgeInsets.only(bottom: 16),
+      child: Material(
+        color: Theme.of(context).colorScheme.primaryContainer.withValues(alpha: 0.35),
+        borderRadius: BorderRadius.circular(16),
+        child: InkWell(
+          borderRadius: BorderRadius.circular(16),
+          onTap: () async {
+            await c.openBook(book);
+            c.setTab(0);
+          },
+          child: Padding(
+            padding: const EdgeInsets.all(12),
+            child: Row(
+              children: [
+                FlickBookCover(book: book, width: 56, height: 76),
+                const SizedBox(width: 12),
+                Expanded(
+                  child: Column(
+                    crossAxisAlignment: CrossAxisAlignment.start,
+                    children: [
+                      Text(
+                        'Continue reading',
+                        style: Theme.of(context).textTheme.labelLarge,
+                      ),
+                      Text(
+                        book.title,
+                        maxLines: 2,
+                        overflow: TextOverflow.ellipsis,
+                        style: Theme.of(context).textTheme.titleMedium,
+                      ),
+                      if (chip != null)
+                        Padding(
+                          padding: const EdgeInsets.only(top: 4),
+                          child: Text(chip, style: Theme.of(context).textTheme.bodySmall),
+                        ),
+                    ],
+                  ),
+                ),
+                const Icon(Icons.play_arrow_rounded, size: 32),
+              ],
+            ),
+          ),
+        ),
+      ),
+    );
+  }
+}
+
+class _ShelfCoverGrid extends StatelessWidget {
+  const _ShelfCoverGrid({required this.books});
+  final List<LibraryBook> books;
+
+  @override
+  Widget build(BuildContext context) {
+    return GridView.builder(
+      shrinkWrap: true,
+      physics: const NeverScrollableScrollPhysics(),
+      gridDelegate: const SliverGridDelegateWithFixedCrossAxisCount(
+        crossAxisCount: 2,
+        mainAxisSpacing: 12,
+        crossAxisSpacing: 12,
+        childAspectRatio: 0.58,
+      ),
+      itemCount: books.length,
+      itemBuilder: (context, index) => _ShelfBookCard(book: books[index]),
+    );
+  }
+}
+
+class _ShelfBookCard extends StatelessWidget {
+  const _ShelfBookCard({required this.book});
+  final LibraryBook book;
+
+  @override
+  Widget build(BuildContext context) {
+    final c = context.watch<FlickController>();
+    final prog = c.progress[book.id];
+    final meta = [
+      if (book.author != null) book.author!,
+      if (c.isBookCompleted(book.id)) 'Finished',
+      if (prog != null) 'Short ${prog.shortIndex + 1}',
+    ].join(' · ');
+
+    return Material(
+      color: Theme.of(context).colorScheme.surface,
+      borderRadius: BorderRadius.circular(14),
+      clipBehavior: Clip.antiAlias,
+      child: InkWell(
+        onTap: () async {
+          await c.openBook(book);
+          c.setTab(0);
+        },
         child: Column(
-          mainAxisAlignment: MainAxisAlignment.center,
+          crossAxisAlignment: CrossAxisAlignment.stretch,
           children: [
-            Text(
-              'Flick',
-              style: Theme.of(context).textTheme.displaySmall,
+            Expanded(
+              child: LayoutBuilder(
+                builder: (context, constraints) => FlickBookCover(
+                  book: book,
+                  width: constraints.maxWidth,
+                  height: constraints.maxHeight,
+                  borderRadius: 0,
+                ),
+              ),
             ),
-            const SizedBox(height: 8),
-            Text(
-              'Add a book to start. Or load free public-domain samples.',
-              textAlign: TextAlign.center,
-              style: Theme.of(context).textTheme.bodyLarge,
-            ),
-            const SizedBox(height: 24),
-            FilledButton(
-              onPressed: onStartBartleby,
-              child: const Text('Start with Bartleby'),
-            ),
-            const SizedBox(height: 12),
-            FilledButton.tonal(
-              onPressed: onAddBook,
-              child: const Text('Add book'),
-            ),
-            const SizedBox(height: 12),
-            OutlinedButton(
-              onPressed: onAddSamples,
-              child: const Text('Add public-domain samples'),
+            Padding(
+              padding: const EdgeInsets.fromLTRB(8, 6, 8, 8),
+              child: Column(
+                crossAxisAlignment: CrossAxisAlignment.start,
+                children: [
+                  Text(
+                    book.title,
+                    maxLines: 2,
+                    overflow: TextOverflow.ellipsis,
+                    style: Theme.of(context).textTheme.titleSmall,
+                  ),
+                  if (meta.isNotEmpty)
+                    Text(
+                      meta,
+                      maxLines: 2,
+                      overflow: TextOverflow.ellipsis,
+                      style: Theme.of(context).textTheme.bodySmall,
+                    ),
+                  Align(
+                    alignment: Alignment.centerRight,
+                    child: IconButton(
+                      visualDensity: VisualDensity.compact,
+                      tooltip: 'Page reader',
+                      onPressed: () {
+                        Navigator.of(context).push(
+                          MaterialPageRoute<void>(
+                            builder: (_) => EbookReaderScreen(book: book),
+                          ),
+                        );
+                      },
+                      icon: const Icon(Icons.auto_stories_outlined, size: 20),
+                    ),
+                  ),
+                ],
+              ),
             ),
           ],
         ),
@@ -498,7 +608,19 @@ class _SampleTile extends StatelessWidget {
     final inLibrary = c.books.any((b) => b.id == sample.id);
     return ListTile(
       contentPadding: EdgeInsets.zero,
-      leading: _Cover(hue: sample.hue),
+      leading: FlickBookCover(
+        book: LibraryBook(
+          id: sample.id,
+          title: sample.title,
+          author: sample.author,
+          source: BookSource.sample,
+          text: '',
+          addedAt: DateTime(2026),
+          coverHue: sample.hue,
+        ),
+        width: 44,
+        height: 58,
+      ),
       title: Text(sample.title),
       subtitle: Text(
         sample.id == kBartlebySampleId
@@ -524,93 +646,3 @@ class _SampleTile extends StatelessWidget {
   }
 }
 
-class _BookTile extends StatelessWidget {
-  const _BookTile({required this.book});
-  final LibraryBook book;
-
-  @override
-  Widget build(BuildContext context) {
-    final c = context.watch<FlickController>();
-    final prog = c.progress[book.id];
-    return Padding(
-      padding: const EdgeInsets.only(bottom: 12),
-      child: Material(
-        color: Theme.of(context).colorScheme.surface,
-        shape: RoundedRectangleBorder(
-          borderRadius: BorderRadius.circular(16),
-          side: BorderSide(
-            color: Theme.of(context).colorScheme.onSurface.withValues(alpha: 0.08),
-          ),
-        ),
-        child: InkWell(
-          borderRadius: BorderRadius.circular(16),
-          onTap: () {
-            Navigator.of(context).push(
-              MaterialPageRoute<void>(
-                builder: (_) => EbookReaderScreen(book: book),
-              ),
-            );
-          },
-          child: Padding(
-            padding: const EdgeInsets.all(12),
-            child: Row(
-              children: [
-                _Cover(hue: book.coverHue),
-                const SizedBox(width: 12),
-                Expanded(
-                  child: Column(
-                    crossAxisAlignment: CrossAxisAlignment.start,
-                    children: [
-                      Text(book.title, maxLines: 2, overflow: TextOverflow.ellipsis),
-                      const SizedBox(height: 4),
-                      Text(
-                        [
-                          if (book.author != null) book.author!,
-                          if (c.isBookCompleted(book.id)) 'Finished',
-                          book.source.name.toUpperCase(),
-                          if (prog != null) 'Flick #${prog.shortIndex + 1}',
-                        ].join(' · '),
-                        style: Theme.of(context).textTheme.bodyMedium,
-                      ),
-                    ],
-                  ),
-                ),
-                IconButton(
-                  tooltip: 'Flick through shorts',
-                  onPressed: () async {
-                    await c.openBook(book);
-                  },
-                  icon: const Icon(Icons.play_circle_outline),
-                ),
-              ],
-            ),
-          ),
-        ),
-      ),
-    );
-  }
-}
-
-class _Cover extends StatelessWidget {
-  const _Cover({required this.hue});
-  final double hue;
-
-  @override
-  Widget build(BuildContext context) {
-    return Container(
-      width: 44,
-      height: 58,
-      decoration: BoxDecoration(
-        borderRadius: BorderRadius.circular(6),
-        gradient: LinearGradient(
-          begin: Alignment.topLeft,
-          end: Alignment.bottomRight,
-          colors: [
-            HSLColor.fromAHSL(1, hue % 360, 0.55, 0.42).toColor(),
-            HSLColor.fromAHSL(1, (hue + 40) % 360, 0.45, 0.28).toColor(),
-          ],
-        ),
-      ),
-    );
-  }
-}

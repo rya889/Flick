@@ -17,7 +17,7 @@ tags: [flick, trunk, library, covers, ux]
 | **ID** | `T12-library-cover-grid-ux` |
 | **Estimate** | M |
 | **Deps** | `T11` (`T07` is complete) |
-| **Status** | ready |
+| **Status** | complete |
 
 ## Goal
 Make the Library shelf scannable and personal without turning Flick into a bookstore: show covers for the seed shelf and imported books, with a reliable typography fallback.
@@ -36,11 +36,11 @@ Make the Library shelf scannable and personal without turning Flick into a books
 - Reader redesign.
 
 ## Acceptance tests
-- [ ] All five seed titles display a cover or deterministic fallback in the same grid/list layout.
-- [ ] An imported book with no cover metadata displays the fallback and remains playable.
-- [ ] Offline mode has no network-dependent cover failure or layout shift.
-- [ ] Small/large text and dark theme keep title/author/progress legible.
-- [ ] Existing Bartleby → Story → Listen → Finish path is unchanged.
+- [x] All five seed titles display a cover or deterministic fallback in the same grid/list layout.
+- [x] An imported book with no cover metadata displays the fallback and remains playable.
+- [x] Offline mode has no network-dependent cover failure or layout shift.
+- [x] Small/large text and dark theme keep title/author/progress legible.
+- [x] Existing Bartleby → Story → Listen → Finish path is unchanged.
 
 ## Files likely touched
 - `app/lib/screens/library_screen.dart`
