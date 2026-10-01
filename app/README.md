@@ -30,7 +30,7 @@ From repo root (pulls `main`, opens Simulator, debug run):
 cd ~/dev/Flick && bash scripts/to-simulator.sh
 ```
 
-Optional: `FLICK_TEST=1` to run `flutter test` first; `FLICK_SIMULATOR="iPhone 16"` to pin a device.
+Sync matches `origin/main` with `reset --hard` (discards local edits on tracked files). Optional: `FLICK_TEST=1`; `FLICK_SIMULATOR="iPhone 16"`; `FLICK_KEEP_LOCAL=1` to `pull --rebase` instead.
 
 ## iPhone (physical device)
 

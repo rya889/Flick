@@ -1,12 +1,15 @@
 #!/usr/bin/env bash
-# One command: pull latest main and run Flick on the iOS Simulator.
+# One command: match origin/main and run Flick on the iOS Simulator.
 #
 #   cd ~/dev/Flick && bash scripts/to-simulator.sh
 #
+# Sync discards uncommitted/unpushed local edits (same idea as to-phone.sh).
+# Gitignored files (.flick/, Signing.local.xcconfig) are kept.
+#
 # Optional:
 #   FLICK_SIMULATOR="iPhone 16" bash scripts/to-simulator.sh
-#   FLICK_HARD=1 bash scripts/to-simulator.sh   # discard local changes (like to-phone.sh)
-#   FLICK_TEST=1 bash scripts/to-simulator.sh   # flutter test before run
+#   FLICK_KEEP_LOCAL=1 bash scripts/to-simulator.sh   # pull --rebase instead of reset --hard
+#   FLICK_TEST=1 bash scripts/to-simulator.sh         # flutter test before run
 set -euo pipefail
 
 ROOT="$(cd "$(dirname "$0")/.." && pwd)"
@@ -18,14 +21,16 @@ DEVICE="${FLICK_SIMULATOR:-ios}"
 echo "==> Flick → iOS Simulator"
 echo "    branch: $BRANCH"
 
-echo "==> Sync origin/$BRANCH"
+echo "==> Sync to origin/$BRANCH"
 git fetch origin "$BRANCH"
 git checkout "$BRANCH"
-if [[ "${FLICK_HARD:-}" == "1" ]]; then
+if [[ "${FLICK_KEEP_LOCAL:-}" == "1" ]]; then
+  echo "    (keeping local commits — pull --rebase)"
+  git pull --rebase origin "$BRANCH"
+else
+  echo "    (local code edits on tracked files are discarded)"
   git reset --hard "origin/$BRANCH"
   git clean -fd
-else
-  git pull --rebase origin "$BRANCH"
 fi
 
 if [[ -x "$ROOT/scripts/strip-swiftuicore-linker.sh" ]]; then
@@ -48,7 +53,6 @@ fi
 
 echo "==> Simulator"
 open -a Simulator || true
-# Let Simulator finish booting.
 sleep 2
 
 echo ""
