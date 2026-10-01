@@ -63,7 +63,7 @@ Assume context = code + docs + tools burns fast.
 
 ## Current next queue
 
-`T01`–`T14` are complete (including UX/covers). **Do not** start T10 without Ryan unlock. Open [`post-ux-queue.md`](./post-ux-queue.md) and implement **one** theme Ryan chooses (or a new trunk file). T08/T09 paywall is shipped; avoid paywall churn unless asked.
+`T01`–`T16` are complete (UX queue + T15 covers + T16 Pro voices). **Do not** start T10 without Ryan unlock. Open [`post-ux-queue.md`](./post-ux-queue.md) for remaining backlog. T08/T09 paywall is shipped; avoid paywall churn unless asked.
 
 ## Ryan dogfood bar (early trunks)
 Through **T03**, success means Ryan can: open app → see **Bartleby** on the shelf → Story-swipe → Listen → reach a **Finish** moment in one sitting. Later trunks must not regress that path.

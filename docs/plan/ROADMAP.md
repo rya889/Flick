@@ -68,6 +68,8 @@ All cloud and local agents work on the shared trunk branch **`main`** (the repos
 | 12 | [T12-library-cover-grid-ux](./trunks/T12-library-cover-grid-ux.md) | M | complete |
 | 13 | [T13-onboarding-empty-states](./trunks/T13-onboarding-empty-states.md) | S | complete |
 | 14 | [T14-reader-chrome-polish](./trunks/T14-reader-chrome-polish.md) | S | complete |
+| 15 | [T15-bundled-seed-covers](./trunks/T15-bundled-seed-covers.md) | M | complete |
+| 16 | [T16-premium-voices-pro](./trunks/T16-premium-voices-pro.md) | M | complete |
 
 **Backlog (not scheduled):** further monetization work, including cloud premium voices inside Pro, waits until the T11 → T12 → T13 → T14 UX queue finishes; Standard Ebooks polish beyond cleared cover art; accounts/sync; Bounce algorithm; Phase 1.5 rewarded voice trial. T10 remains parked until Ryan explicitly unlocks it.
 
