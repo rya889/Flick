@@ -3,7 +3,7 @@ import 'package:flick/models/book_cover.dart';
 import 'package:flick/models/models.dart';
 
 void main() {
-  test('seed titles use generated cover source', () {
+  test('seed titles use bundled Standard Ebooks covers (T15)', () {
     for (final sample in sampleLibrary) {
       final book = LibraryBook(
         id: sample.id,
@@ -15,9 +15,25 @@ void main() {
         coverHue: sample.hue,
       );
       final meta = coverMetaForBook(book);
-      expect(meta.source, CoverSource.generated);
-      expect(meta.assetPath, isNull);
+      expect(meta.source, CoverSource.bundled);
+      expect(meta.assetPath, isNotNull);
+      expect(meta.license, 'CC0-1.0');
+      expect(meta.attribution, isNotEmpty);
     }
+  });
+
+  test('imported books stay on generated typography', () {
+    final book = LibraryBook(
+      id: 'import-1',
+      title: 'Paste book',
+      source: BookSource.paste,
+      text: 'x',
+      addedAt: DateTime(2026),
+      coverHue: 100,
+    );
+    final meta = coverMetaForBook(book);
+    expect(meta.source, CoverSource.generated);
+    expect(meta.assetPath, isNull);
   });
 
   test('cover accent hue is stable for same book', () {

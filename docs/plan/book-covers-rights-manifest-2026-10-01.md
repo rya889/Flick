@@ -25,18 +25,17 @@ Resolver: `coverAsset` + `bundled` → local image; else → `FlickBookCover` ty
 | Open Library Covers API | Lookup / candidate preview only; no auto-ship |
 | Google Books thumbnails | Research fallback only; not runtime |
 
-## Seed shelf disposition (five titles)
+## Seed shelf disposition (five titles) — T15 bundled
 
-| Book | ID | Cover disposition | Notes |
-| --- | --- | --- | --- |
-| Bartleby, the Scrivener | `sample-bartleby` | **generated** | PG #11231; no bundled art in T12 |
-| The Machine Stops | `sample-machine-stops` | **generated** | Extract from PG #72890 collection |
-| Notes from Underground | `sample-notes-underground` | **generated** | PG #600 |
-| Dr. Jekyll and Mr. Hyde | `sample-jekyll-hyde` | **generated** | PG #43 |
-| The Strange Case… | | | |
-| The Time Machine | `sample-time-machine` | **generated** | PG #35 |
+| Book | ID | Asset | License | SE source |
+| --- | --- | --- | --- | --- |
+| Bartleby, the Scrivener | `sample-bartleby` | `assets/covers/bartleby.jpg` | CC0-1.0 | `herman-melville/short-fiction` (collection cover) |
+| The Machine Stops | `sample-machine-stops` | `assets/covers/machine-stops.jpg` | CC0-1.0 | `e-m-forster/short-fiction` (collection cover) |
+| Notes from Underground | `sample-notes-underground` | `assets/covers/notes-underground.jpg` | CC0-1.0 | `fyodor-dostoevsky/notes-from-underground/constance-garnett` |
+| Dr. Jekyll and Mr. Hyde | `sample-jekyll-hyde` | `assets/covers/jekyll-hyde.jpg` | CC0-1.0 | `robert-louis-stevenson/the-strange-case-of-dr-jekyll-and-mr-hyde` |
+| The Time Machine | `sample-time-machine` | `assets/covers/time-machine.jpg` | CC0-1.0 | `h-g-wells/the-time-machine` |
 
-All five: `coverSource=generated`, no `coverAsset`. Future SE/CC0 art adds a manifest row before bundling.
+Imported / non-seed titles remain **generated** unless a new manifest row is added.
 
 ## Unresolved title policy
 
