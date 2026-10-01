@@ -17,7 +17,7 @@ tags: [flick, trunk, book-covers, public-domain, rights]
 | **ID** | `T11-book-covers-source` |
 | **Estimate** | S |
 | **Deps** | `T03` dogfood (met); `T06` source decision (met) |
-| **Status** | ready |
+| **Status** | complete |
 
 ## Goal
 Choose a defensible, low-maintenance cover pipeline for the five seed titles and future imported public-domain books. This is a research/metadata decision, not a UI or app-code trunk.
@@ -59,10 +59,10 @@ For every non-generated asset, keep: title/author/edition ID; image URL and loca
 - Treating a source’s “public domain book” status as proof that a third-party scan or cover image is also cleared.
 
 ## Acceptance tests
-- [ ] A source matrix and one MVP recommendation are recorded in this trunk.
-- [ ] Each seed title has a cover disposition and rights/attribution record; unresolved titles use generated fallback.
-- [ ] No recommendation requires hotlinking or an unverified community/commercial cover.
-- [ ] T12 has a clear local asset/metadata contract.
+- [x] A source matrix and one MVP recommendation are recorded in this trunk.
+- [x] Each seed title has a cover disposition and rights/attribution record; unresolved titles use generated fallback.
+- [x] No recommendation requires hotlinking or an unverified community/commercial cover.
+- [x] T12 has a clear local asset/metadata contract.
 
 ## Research links
 - [Open Library Covers API](https://openlibrary.org/dev/docs/api/covers) and [API limits](https://openlibrary.org/developers/api).
