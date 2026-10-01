@@ -227,6 +227,7 @@ const sampleLibrary = [
     assetPath: 'assets/samples/holmes.txt',
     hue: 210,
   ),
+  // DO NOT SHIP: Kafka/Wyllie text is not cleared. Swap this sample in T02.
   SampleMeta(
     id: 'sample-metamorphosis',
     title: 'The Metamorphosis',
