@@ -596,7 +596,7 @@ class _ShelfCoverGrid extends StatelessWidget {
         crossAxisCount: 2,
         mainAxisSpacing: 12,
         crossAxisSpacing: 12,
-        childAspectRatio: 0.52,
+        childAspectRatio: 0.56,
       ),
       itemCount: books.length,
       itemBuilder: (context, index) => _ShelfBookCard(book: books[index]),
@@ -642,29 +642,20 @@ class _ShelfBookCard extends StatelessWidget {
               ),
             ),
             Padding(
-              padding: const EdgeInsets.fromLTRB(8, 4, 4, 6),
+              padding: const EdgeInsets.fromLTRB(10, 6, 6, 8),
               child: Row(
-                crossAxisAlignment: CrossAxisAlignment.start,
                 children: [
                   Expanded(
-                    child: Column(
-                      mainAxisSize: MainAxisSize.min,
-                      crossAxisAlignment: CrossAxisAlignment.start,
-                      children: [
-                        Text(
-                          book.title,
-                          maxLines: 2,
-                          overflow: TextOverflow.ellipsis,
-                          style: Theme.of(context).textTheme.titleSmall,
-                        ),
-                        if (meta.isNotEmpty)
-                          Text(
-                            meta,
-                            maxLines: 1,
-                            overflow: TextOverflow.ellipsis,
-                            style: Theme.of(context).textTheme.bodySmall,
+                    child: Text(
+                      meta.isNotEmpty ? meta : book.title,
+                      maxLines: 2,
+                      overflow: TextOverflow.ellipsis,
+                      style: Theme.of(context).textTheme.bodySmall?.copyWith(
+                            color: Theme.of(context)
+                                .colorScheme
+                                .onSurface
+                                .withValues(alpha: 0.72),
                           ),
-                      ],
                     ),
                   ),
                   InkWell(
@@ -676,9 +667,13 @@ class _ShelfBookCard extends StatelessWidget {
                       );
                     },
                     borderRadius: BorderRadius.circular(8),
-                    child: const Padding(
-                      padding: EdgeInsets.all(6),
-                      child: Icon(Icons.auto_stories_outlined, size: 20),
+                    child: Padding(
+                      padding: const EdgeInsets.all(6),
+                      child: Icon(
+                        Icons.auto_stories_outlined,
+                        size: 20,
+                        color: Theme.of(context).colorScheme.primary,
+                      ),
                     ),
                   ),
                 ],
