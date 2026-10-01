@@ -37,6 +37,9 @@ class _EbookReaderScreenState extends State<EbookReaderScreen> {
   int _heardFinish = 0;
   int _armedGen = 0;
   FlickController? _controller;
+  bool _pageTurnInFlight = false;
+  DateTime _lastPageTurnAt = DateTime.fromMillisecondsSinceEpoch(0);
+  static const _pageTurnCooldown = Duration(milliseconds: 420);
 
   @override
   void initState() {
@@ -184,21 +187,25 @@ class _EbookReaderScreenState extends State<EbookReaderScreen> {
     );
   }
 
-  void _onTap(TapUpDetails details) {
-    final width = MediaQuery.sizeOf(context).width;
-    final x = details.localPosition.dx;
-    if (x < width * 0.28) {
-      _goRelative(-1);
-    } else if (x > width * 0.72) {
-      _goRelative(1);
-    } else {
-      setState(() => _chrome = !_chrome);
+  void _onTapZone(_ReaderTapZone zone) {
+    switch (zone) {
+      case _ReaderTapZone.previous:
+        unawaited(_goRelative(-1));
+      case _ReaderTapZone.next:
+        unawaited(_goRelative(1));
+      case _ReaderTapZone.center:
+        setState(() => _chrome = !_chrome);
     }
   }
 
   Future<void> _goRelative(int delta) async {
     final controller = _pageController;
     if (controller == null || _pages.isEmpty) return;
+    final now = DateTime.now();
+    if (_pageTurnInFlight ||
+        now.difference(_lastPageTurnAt) < _pageTurnCooldown) {
+      return;
+    }
     final next = _pageIndex + delta;
     if (next < 0 || next >= _pages.length) {
       if (delta > 0) {
@@ -209,11 +216,17 @@ class _EbookReaderScreenState extends State<EbookReaderScreen> {
       }
       return;
     }
-    await controller.animateToPage(
-      next,
-      duration: const Duration(milliseconds: 220),
-      curve: Curves.easeOut,
-    );
+    _pageTurnInFlight = true;
+    _lastPageTurnAt = now;
+    try {
+      await controller.animateToPage(
+        next,
+        duration: const Duration(milliseconds: 220),
+        curve: Curves.easeOut,
+      );
+    } finally {
+      if (mounted) _pageTurnInFlight = false;
+    }
   }
 
   void _startFollow() {
@@ -380,10 +393,18 @@ class _EbookReaderScreenState extends State<EbookReaderScreen> {
     if (_chapters.isEmpty) return;
     final picked = await showModalBottomSheet<int>(
       context: context,
+      showDragHandle: true,
       builder: (context) {
         return SafeArea(
           child: ListView(
             children: [
+              Padding(
+                padding: const EdgeInsets.fromLTRB(20, 8, 20, 4),
+                child: Text(
+                  'Chapters',
+                  style: Theme.of(context).textTheme.titleMedium,
+                ),
+              ),
               for (final chapter in _chapters)
                 ListTile(
                   title: Text(chapter.title),
@@ -414,12 +435,16 @@ class _EbookReaderScreenState extends State<EbookReaderScreen> {
     final fraction = _pages.length <= 1 ? 0.0 : _pageIndex / (_pages.length - 1);
     final activeWord = _followPlaying && c.readerFollowAlong ? _followWord : -1;
 
+    final pageLabel = _pages.isEmpty
+        ? ''
+        : 'Page ${_pageIndex + 1} of ${_pages.length}';
+
     return Scaffold(
       backgroundColor: paper.background,
       body: SafeArea(
         child: Column(
           children: [
-            if (_chrome) _topBar(context, c, paper),
+            if (_chrome) _topBar(context, c, paper, page, pageLabel),
             Expanded(
               child: LayoutBuilder(
                 builder: (context, constraints) {
@@ -435,173 +460,311 @@ class _EbookReaderScreenState extends State<EbookReaderScreen> {
                       child: Text(_error!, style: TextStyle(color: paper.ink)),
                     );
                   }
-                  return GestureDetector(
-                    behavior: HitTestBehavior.opaque,
-                    onTapUp: _onTap,
-                    child: PageView.builder(
-                      key: ValueKey(
-                        '${c.readerFontSize}-${c.readerPaper.name}-${_pages.length}',
-                      ),
-                      controller: _pageController,
-                      itemCount: _pages.length,
-                      onPageChanged: (index) {
-                        setState(() {
-                          _pageIndex = index;
-                          _followWord = 0;
-                        });
-                        _persist();
-                        if (_followPlaying) _startFollow();
-                      },
-                      itemBuilder: (context, index) {
-                        final slice = _pages[index];
-                        return Padding(
-                          padding: const EdgeInsets.symmetric(horizontal: 22),
-                          child: Align(
-                            alignment: Alignment.topLeft,
-                            child: _PageText(
-                              text: slice.text.isEmpty
-                                  ? 'This chapter is empty.'
-                                  : slice.text,
-                              style: _style(c, paper),
-                              activeWord: index == _pageIndex ? activeWord : -1,
-                              highlight: paper.ink.withValues(alpha: 0.16),
+                  return Stack(
+                    fit: StackFit.expand,
+                    children: [
+                      PageView.builder(
+                        key: ValueKey(
+                          '${c.readerFontSize}-${c.readerPaper.name}-${_pages.length}',
+                        ),
+                        controller: _pageController,
+                        physics: const NeverScrollableScrollPhysics(),
+                        itemCount: _pages.length,
+                        onPageChanged: (index) {
+                          setState(() {
+                            _pageIndex = index;
+                            _followWord = 0;
+                          });
+                          _persist();
+                          if (_followPlaying) _startFollow();
+                        },
+                        itemBuilder: (context, index) {
+                          final slice = _pages[index];
+                          return Padding(
+                            padding: const EdgeInsets.symmetric(horizontal: 22),
+                            child: Align(
+                              alignment: Alignment.topLeft,
+                              child: _PageText(
+                                text: slice.text.isEmpty
+                                    ? 'This chapter is empty.'
+                                    : slice.text,
+                                style: _style(c, paper),
+                                activeWord:
+                                    index == _pageIndex ? activeWord : -1,
+                                highlight: paper.ink.withValues(alpha: 0.16),
+                              ),
                             ),
-                          ),
-                        );
-                      },
-                    ),
+                          );
+                        },
+                      ),
+                      _ReaderTapLanes(onZoneTap: _onTapZone),
+                    ],
                   );
                 },
               ),
             ),
-            _bottomBar(paper, page, fraction),
+            if (_chrome) _bottomBar(context, c, paper, page, fraction, pageLabel),
           ],
         ),
       ),
     );
   }
 
-  Widget _topBar(BuildContext context, FlickController c, _PaperColors paper) {
-    return Padding(
-      padding: const EdgeInsets.fromLTRB(8, 4, 4, 0),
-      child: Column(
-        crossAxisAlignment: CrossAxisAlignment.start,
-        children: [
-          Text(
-            widget.book.title,
-            maxLines: 1,
-            overflow: TextOverflow.ellipsis,
-            style: TextStyle(color: paper.ink, fontWeight: FontWeight.w600),
-          ),
-          if (c.continueReadingLabel(widget.book.id) != null)
-            Padding(
-              padding: const EdgeInsets.only(left: 4, bottom: 4),
-              child: ActionChip(
-                visualDensity: VisualDensity.compact,
-                label: Text(
-                  'Resume ${c.continueReadingLabel(widget.book.id)} in Story',
-                  style: TextStyle(color: paper.ink, fontSize: 12),
+  Future<void> _showReaderMenu(FlickController c) async {
+    final action = await showModalBottomSheet<String>(
+      context: context,
+      showDragHandle: true,
+      builder: (context) {
+        return SafeArea(
+          child: Column(
+            mainAxisSize: MainAxisSize.min,
+            children: [
+              ListTile(
+                leading: Icon(
+                  _followPlaying ? Icons.record_voice_over : Icons.spatial_audio_off,
                 ),
-                backgroundColor: paper.ink.withValues(alpha: 0.08),
-                side: BorderSide(color: paper.ink.withValues(alpha: 0.2)),
-                onPressed: () async {
-                  final idx = c.progress[widget.book.id]?.shortIndex;
-                  await c.openBook(widget.book, shortIndex: idx);
-                  if (context.mounted) Navigator.pop(context);
-                },
+                title: Text(_followPlaying ? 'Stop read-along' : 'Read-along'),
+                onTap: () => Navigator.pop(context, 'follow'),
               ),
-            ),
-          Row(
-        children: [
-          IconButton(
-            onPressed: () => Navigator.pop(context),
-            icon: Icon(Icons.close, color: paper.ink),
+              ListTile(
+                leading: Icon(c.muted ? Icons.volume_off : Icons.volume_up),
+                title: Text(c.muted ? 'Start Listen' : 'Mute Listen'),
+                onTap: () => Navigator.pop(context, 'listen'),
+              ),
+              ListTile(
+                leading: const Icon(Icons.record_voice_over_outlined),
+                title: Text('Voice · ${c.listenVoiceLabel ?? 'System'}'),
+                onTap: () => Navigator.pop(context, 'voice'),
+              ),
+              ListTile(
+                leading: const Icon(Icons.speed),
+                title: Text('Speed · ${c.playbackSpeed}x'),
+                onTap: () => Navigator.pop(context, 'speed'),
+              ),
+              ListTile(
+                leading: const Icon(Icons.text_fields),
+                title: const Text('Text size & theme'),
+                onTap: () => Navigator.pop(context, 'text'),
+              ),
+            ],
           ),
-          Expanded(
-            child: SingleChildScrollView(
-              scrollDirection: Axis.horizontal,
-              child: Row(
-                children: [
-                  IconButton(
-                    tooltip: _followPlaying
-                        ? 'Stop read-along'
-                        : 'Start read-along',
-                    onPressed: _toggleFollow,
-                    icon: Icon(
-                      _followPlaying ? Icons.record_voice_over : Icons.spatial_audio_off,
-                      color: _followPlaying ? paper.ink : paper.ink.withValues(alpha: 0.45),
+        );
+      },
+    );
+    if (!mounted || action == null) return;
+    switch (action) {
+      case 'follow':
+        await _toggleFollow();
+      case 'listen':
+        await _toggleListen();
+      case 'voice':
+        await _pickVoice(c);
+      case 'speed':
+        await _pickSpeed(c);
+      case 'text':
+        await _showTextSettings(c);
+    }
+  }
+
+  Future<void> _pickSpeed(FlickController c) async {
+    final speed = await showModalBottomSheet<double>(
+      context: context,
+      showDragHandle: true,
+      builder: (context) {
+        return SafeArea(
+          child: Column(
+            mainAxisSize: MainAxisSize.min,
+            children: [
+              for (final s in const [0.75, 1.0, 1.25, 1.5, 2.0])
+                ListTile(
+                  title: Text('${s}x'),
+                  trailing: (c.playbackSpeed - s).abs() < 0.01
+                      ? const Icon(Icons.check)
+                      : null,
+                  onTap: () => Navigator.pop(context, s),
+                ),
+            ],
+          ),
+        );
+      },
+    );
+    if (speed == null) return;
+    await c.setPlaybackSpeed(speed);
+    if (_followPlaying) _startFollow();
+  }
+
+  Future<void> _showTextSettings(FlickController c) async {
+    await showModalBottomSheet<void>(
+      context: context,
+      showDragHandle: true,
+      builder: (context) {
+        return SafeArea(
+          child: Padding(
+            padding: const EdgeInsets.fromLTRB(16, 0, 16, 16),
+            child: Column(
+              mainAxisSize: MainAxisSize.min,
+              crossAxisAlignment: CrossAxisAlignment.stretch,
+              children: [
+                Text('Text', style: Theme.of(context).textTheme.titleMedium),
+                Row(
+                  mainAxisAlignment: MainAxisAlignment.center,
+                  children: [
+                    IconButton(
+                      tooltip: 'Smaller',
+                      onPressed: () => _changeFont(-2),
+                      icon: const Icon(Icons.text_decrease),
                     ),
-                  ),
-                  IconButton(
-                    tooltip: c.muted ? 'Listen' : 'Mute',
-                    onPressed: _toggleListen,
-                    icon: Icon(
-                      c.muted ? Icons.volume_off : Icons.volume_up,
-                      color: paper.ink,
+                    Text('${c.readerFontSize.round()} pt'),
+                    IconButton(
+                      tooltip: 'Larger',
+                      onPressed: () => _changeFont(2),
+                      icon: const Icon(Icons.text_increase),
                     ),
-                  ),
-                  TextButton(
-                    onPressed: () => _pickVoice(c),
-                    child: Text(
-                      c.listenVoiceLabel ?? 'Voice',
-                      style: TextStyle(color: paper.ink),
-                    ),
-                  ),
-                  PopupMenuButton<double>(
-                    tooltip: 'Speed',
-                    initialValue: c.playbackSpeed,
-                    onSelected: (speed) async {
-                      await c.setPlaybackSpeed(speed);
-                      if (_followPlaying) _startFollow();
-                    },
-                    itemBuilder: (context) => [
-                      for (final speed in const [0.75, 1.0, 1.25, 1.5, 2.0])
-                        CheckedPopupMenuItem(
-                          value: speed,
-                          checked: (c.playbackSpeed - speed).abs() < 0.01,
-                          child: Text('${speed}x'),
+                  ],
+                ),
+                OutlinedButton.icon(
+                  onPressed: () {
+                    Navigator.pop(context);
+                    _cyclePaper();
+                  },
+                  icon: const Icon(Icons.contrast),
+                  label: const Text('Paper / night theme'),
+                ),
+              ],
+            ),
+          ),
+        );
+      },
+    );
+  }
+
+  Widget _topBar(
+    BuildContext context,
+    FlickController c,
+    _PaperColors paper,
+    PageSlice? page,
+    String pageLabel,
+  ) {
+    final chapterTitle = page?.chapterTitle ?? 'Chapter';
+    return Material(
+      color: paper.background,
+      elevation: 0,
+      child: Column(
+        crossAxisAlignment: CrossAxisAlignment.stretch,
+        children: [
+          Padding(
+            padding: const EdgeInsets.fromLTRB(4, 0, 4, 0),
+            child: Row(
+              children: [
+                IconButton(
+                  tooltip: 'Close',
+                  onPressed: () => Navigator.pop(context),
+                  icon: Icon(Icons.arrow_back, color: paper.ink),
+                ),
+                Expanded(
+                  child: Column(
+                    crossAxisAlignment: CrossAxisAlignment.start,
+                    children: [
+                      Text(
+                        widget.book.title,
+                        maxLines: 1,
+                        overflow: TextOverflow.ellipsis,
+                        style: TextStyle(
+                          color: paper.ink,
+                          fontWeight: FontWeight.w600,
+                          fontSize: 15,
+                        ),
+                      ),
+                      if (c.continueReadingLabel(widget.book.id) != null)
+                        TextButton(
+                          style: TextButton.styleFrom(
+                            padding: EdgeInsets.zero,
+                            minimumSize: Size.zero,
+                            tapTargetSize: MaterialTapTargetSize.shrinkWrap,
+                          ),
+                          onPressed: () async {
+                            final idx = c.progress[widget.book.id]?.shortIndex;
+                            await c.openBook(widget.book, shortIndex: idx);
+                            if (context.mounted) Navigator.pop(context);
+                          },
+                          child: Text(
+                            'Resume ${c.continueReadingLabel(widget.book.id)} in Story',
+                            style: TextStyle(
+                              color: paper.ink.withValues(alpha: 0.75),
+                              fontSize: 12,
+                            ),
+                          ),
                         ),
                     ],
-                    child: Padding(
-                      padding: const EdgeInsets.symmetric(horizontal: 8),
+                  ),
+                ),
+                IconButton(
+                  tooltip: 'Listen',
+                  onPressed: _toggleListen,
+                  icon: Icon(
+                    c.muted ? Icons.headphones_outlined : Icons.headphones,
+                    color: paper.ink,
+                  ),
+                ),
+                IconButton(
+                  tooltip: 'Reader settings',
+                  onPressed: () => _showReaderMenu(c),
+                  icon: Icon(Icons.more_vert, color: paper.ink),
+                ),
+              ],
+            ),
+          ),
+          Padding(
+            padding: const EdgeInsets.fromLTRB(12, 0, 12, 6),
+            child: InkWell(
+              borderRadius: BorderRadius.circular(8),
+              onTap: _showChapters,
+              child: Padding(
+                padding: const EdgeInsets.symmetric(horizontal: 8, vertical: 6),
+                child: Row(
+                  children: [
+                    Icon(Icons.menu_book_outlined,
+                        size: 18, color: paper.ink.withValues(alpha: 0.8)),
+                    const SizedBox(width: 8),
+                    Expanded(
                       child: Text(
-                        '${c.playbackSpeed}x',
-                        style: TextStyle(color: paper.ink, fontWeight: FontWeight.w600),
+                        chapterTitle,
+                        maxLines: 1,
+                        overflow: TextOverflow.ellipsis,
+                        style: TextStyle(
+                          color: paper.ink.withValues(alpha: 0.85),
+                          fontSize: 14,
+                          fontWeight: FontWeight.w500,
+                        ),
                       ),
                     ),
-                  ),
-                  IconButton(
-                    tooltip: 'Smaller text',
-                    onPressed: () => _changeFont(-2),
-                    icon: Icon(Icons.text_decrease, color: paper.ink),
-                  ),
-                  IconButton(
-                    tooltip: 'Larger text',
-                    onPressed: () => _changeFont(2),
-                    icon: Icon(Icons.text_increase, color: paper.ink),
-                  ),
-                  IconButton(
-                    tooltip: 'Paper',
-                    onPressed: _cyclePaper,
-                    icon: Icon(Icons.contrast, color: paper.ink),
-                  ),
-                  IconButton(
-                    tooltip: 'Chapters',
-                    onPressed: _showChapters,
-                    icon: Icon(Icons.list, color: paper.ink),
-                  ),
-                ],
+                    Text(
+                      pageLabel,
+                      style: TextStyle(
+                        color: paper.ink.withValues(alpha: 0.55),
+                        fontSize: 12,
+                      ),
+                    ),
+                    Icon(Icons.expand_more,
+                        size: 20, color: paper.ink.withValues(alpha: 0.55)),
+                  ],
+                ),
               ),
             ),
           ),
-        ],
-      ),
         ],
       ),
     );
   }
 
-  Widget _bottomBar(_PaperColors paper, PageSlice? page, double fraction) {
+  Widget _bottomBar(
+    BuildContext context,
+    FlickController c,
+    _PaperColors paper,
+    PageSlice? page,
+    double fraction,
+    String pageLabel,
+  ) {
     final percent = (fraction * 100).round();
     return Padding(
       padding: const EdgeInsets.fromLTRB(16, 4, 16, 8),
@@ -612,16 +775,55 @@ class _EbookReaderScreenState extends State<EbookReaderScreen> {
             value: fraction.clamp(0, 1),
             color: paper.ink.withValues(alpha: 0.88),
             backgroundColor: paper.ink.withValues(alpha: 0.18),
-            minHeight: 4,
+            minHeight: 3,
             borderRadius: BorderRadius.circular(2),
           ),
           const SizedBox(height: 6),
           Text(
-            '${page?.chapterTitle ?? ''} · $percent%',
-            style: TextStyle(color: paper.ink.withValues(alpha: 0.7), fontSize: 13),
+            '$pageLabel · $percent% in book',
+            textAlign: TextAlign.center,
+            style: TextStyle(color: paper.ink.withValues(alpha: 0.65), fontSize: 12),
           ),
         ],
       ),
+    );
+  }
+}
+
+enum _ReaderTapZone { previous, center, next }
+
+/// Kindle-style margins: tap left/right to turn; center toggles chrome.
+class _ReaderTapLanes extends StatelessWidget {
+  const _ReaderTapLanes({required this.onZoneTap});
+
+  final void Function(_ReaderTapZone zone) onZoneTap;
+
+  @override
+  Widget build(BuildContext context) {
+    return Row(
+      children: [
+        Expanded(
+          flex: 26,
+          child: GestureDetector(
+            behavior: HitTestBehavior.translucent,
+            onTap: () => onZoneTap(_ReaderTapZone.previous),
+          ),
+        ),
+        Expanded(
+          flex: 48,
+          child: GestureDetector(
+            behavior: HitTestBehavior.translucent,
+            onTap: () => onZoneTap(_ReaderTapZone.center),
+          ),
+        ),
+        Expanded(
+          flex: 26,
+          child: GestureDetector(
+            behavior: HitTestBehavior.translucent,
+            onTap: () => onZoneTap(_ReaderTapZone.next),
+          ),
+        ),
+      ],
     );
   }
 }
