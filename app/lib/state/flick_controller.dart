@@ -107,6 +107,31 @@ class FlickController extends ChangeNotifier {
           ? null
           : queue[queueIndex];
 
+  /// Most recent Story progress, else active book (T14 continue hero).
+  LibraryBook? get continueReadingBook {
+    if (books.isEmpty) return null;
+    if (activeBook != null && books.any((b) => b.id == activeBook!.id)) {
+      return activeBook;
+    }
+    ReadingProgress? latest;
+    LibraryBook? pick;
+    for (final book in books) {
+      final p = progress[book.id];
+      if (p == null) continue;
+      if (latest == null || p.updatedAt.isAfter(latest.updatedAt)) {
+        latest = p;
+        pick = book;
+      }
+    }
+    return pick ?? books.first;
+  }
+
+  String? continueReadingLabel(String bookId) {
+    final p = progress[bookId];
+    if (p == null) return null;
+    return 'Short ${p.shortIndex + 1}';
+  }
+
   String get displayText {
     final item = current;
     if (item == null) return '';

@@ -472,6 +472,24 @@ class _EbookReaderScreenState extends State<EbookReaderScreen> {
             overflow: TextOverflow.ellipsis,
             style: TextStyle(color: paper.ink, fontWeight: FontWeight.w600),
           ),
+          if (c.continueReadingLabel(widget.book.id) != null)
+            Padding(
+              padding: const EdgeInsets.only(left: 4, bottom: 4),
+              child: ActionChip(
+                visualDensity: VisualDensity.compact,
+                label: Text(
+                  'Resume ${c.continueReadingLabel(widget.book.id)} in Story',
+                  style: TextStyle(color: paper.ink, fontSize: 12),
+                ),
+                backgroundColor: paper.ink.withValues(alpha: 0.08),
+                side: BorderSide(color: paper.ink.withValues(alpha: 0.2)),
+                onPressed: () async {
+                  final idx = c.progress[widget.book.id]?.shortIndex;
+                  await c.openBook(widget.book, shortIndex: idx);
+                  if (context.mounted) Navigator.pop(context);
+                },
+              ),
+            ),
           Row(
         children: [
           IconButton(
@@ -565,15 +583,16 @@ class _EbookReaderScreenState extends State<EbookReaderScreen> {
   Widget _bottomBar(_PaperColors paper, PageSlice? page, double fraction) {
     final percent = (fraction * 100).round();
     return Padding(
-      padding: const EdgeInsets.fromLTRB(20, 4, 20, 10),
+      padding: const EdgeInsets.fromLTRB(16, 4, 16, 8),
       child: Column(
         crossAxisAlignment: CrossAxisAlignment.stretch,
         children: [
           LinearProgressIndicator(
             value: fraction.clamp(0, 1),
-            color: paper.ink.withValues(alpha: 0.8),
-            backgroundColor: paper.ink.withValues(alpha: 0.12),
-            minHeight: 3,
+            color: paper.ink.withValues(alpha: 0.88),
+            backgroundColor: paper.ink.withValues(alpha: 0.18),
+            minHeight: 4,
+            borderRadius: BorderRadius.circular(2),
           ),
           const SizedBox(height: 6),
           Text(

@@ -34,10 +34,10 @@ Make it easier to resume a book and understand progress while keeping the reader
 - New content, ads, paywall, or sync.
 
 ## Acceptance tests
-- [ ] Cold open returns to the active book/position in one obvious action.
-- [ ] Progress is understandable without competing with text or karaoke controls.
-- [ ] Dark theme has readable contrast across reader chrome and fallback covers.
-- [ ] Bartleby finish path and Listen controls do not regress.
+- [x] Cold open returns to the active book/position in one obvious action.
+- [x] Progress is understandable without competing with text or karaoke controls.
+- [x] Dark theme has readable contrast across reader chrome and fallback covers.
+- [x] Bartleby finish path and Listen controls do not regress.
 
 ## Files likely touched
 - `app/lib/screens/library_screen.dart`
