@@ -3,7 +3,7 @@ date: 2026-10-01
 source: chat
 origin: ai
 type: plan
-status: ready
+status: complete
 derived_from: [projects/flick/ROADMAP.md]
 generated_by: AI agent (Forge trunks)
 reviewed: false
@@ -18,7 +18,7 @@ tags: [flick, trunk, t01-foundation-baseline]
 | **ID** | `T01-foundation-baseline` |
 | **Estimate** | S |
 | **Deps** | `none` |
-| **Status** | ready |
+| **Status** | complete |
 
 ## Goal
 Make the next dogfood trunks safe: app/tests baseline understood, rights landmine flagged, vault↔code deltas documented — **no product feature work**.

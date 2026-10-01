@@ -27,11 +27,11 @@ All cloud and local agents work on the shared trunk branch **`main`** (the repos
 1. Read **this** file.
 2. Treat this in-repo plan as self-contained; cloud agents do not need vault access.
 3. Skim [`ROADMAP.md`](./ROADMAP.md) north star + principles (do not re-plan the whole roadmap).
-4. Open **exactly one** trunk under [`trunks/`](./trunks/) — the ID Ryan named, or the first **ready** trunk with deps met.
+4. Open **exactly one** trunk under [`trunks/`](./trunks/) — the ID Ryan named, or the first **ready** trunk in the current queue **T11 → T12 → T13 → T14** whose deps are met.
 5. Optionally skim locked product notes if the trunk cites them:
    - [`README.md`](./README.md) — wedge + monetization locks
    - [`seed-shelf-2026-10-01.md`](./seed-shelf-2026-10-01.md) — dogfood titles
-6. Code lives at the repository root (**`../`** from this file), with Flutter under **`../app/`**. Specs under `../docs/` are useful, but the product locks below supersede stale Plus $6.99 language until T08.
+6. Code lives at the repository root (**`../`** from this file), with Flutter under **`../app/`**. Specs under `../docs/` are useful; T08/T09 monetization is shipped, and no further paywall work precedes the UX queue.
 
 ## Product locks + provenance
 - **Wedge:** public-domain fiction finishers; Flick is an anti-doomscroll reader with shorts, Listen/karaoke, and Finish moments.
@@ -61,9 +61,9 @@ Assume context = code + docs + tools burns fast.
 - [ ] Handoff written; CATALOG/INDEX updated if you added durable notes
 - [ ] Keep durable handoff notes in this in-repo plan; no thought-repo or vault access is required
 
-## Post-core cover and UX backlog
+## Current next queue — UX/covers first
 
-Do not renumber or reorder `T01`–`T10`; `T02` may be running on another agent. The optional additions are intentionally `T11`–`T14`: run `T11-book-covers-source` after/alongside the T06 source decision, then `T12-library-cover-grid-ux` after T07; keep T13 parked until early dogfood exposes empty-state problems, and take T14 only as a bite-size post-T05 polish pass. No app feature code is implied by this planning update.
+`T01`–`T09` are complete. Pick the first ready trunk in this order: **T11 → T12 → T13 → T14**. T11 is next; T12 follows T11; T13 is unlocked because T03 dogfood is complete; T14 follows T12 for the cover-consistency polish pass. T08/T09 monetization is shipped; do not start further paywall work until this UX queue finishes. T10 remains parked.
 
 ## Ryan dogfood bar (early trunks)
 Through **T03**, success means Ryan can: open app → see **Bartleby** on the shelf → Story-swipe → Listen → reach a **Finish** moment in one sitting. Later trunks must not regress that path.

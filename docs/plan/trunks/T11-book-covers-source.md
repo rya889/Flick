@@ -16,7 +16,7 @@ tags: [flick, trunk, book-covers, public-domain, rights]
 | --- | --- |
 | **ID** | `T11-book-covers-source` |
 | **Estimate** | S |
-| **Deps** | `T05` preferred; coordinate with `T06` source decision |
+| **Deps** | `T03` dogfood (met); `T06` source decision (met) |
 | **Status** | ready |
 
 ## Goal

@@ -2,7 +2,7 @@
 date: 2026-10-01
 source: plan
 origin: chat
-status: parked
+status: ready
 derived_from: [projects/flick/ROADMAP.md, projects/flick/trunks/T03-bartleby-dogfood-e2e.md]
 generated_by: AI agent
 reviewed: false
@@ -16,8 +16,8 @@ tags: [flick, trunk, onboarding, empty-states, ux]
 | --- | --- |
 | **ID** | `T13-onboarding-empty-states` |
 | **Estimate** | S |
-| **Deps** | `T03`; coordinate with `T07` and `T12` |
-| **Status** | parked — unlock after early dogfood confirms the core path |
+| **Deps** | `T03` dogfood (met) |
+| **Status** | ready — unlocked; T03 dogfood dependency is met |
 
 ## Goal
 Replace blank or ambiguous screens with brief next actions that get a new user to a free book quickly, without adding an onboarding funnel.

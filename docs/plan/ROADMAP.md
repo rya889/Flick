@@ -31,7 +31,7 @@ Ship an anti-doomscroll **public-domain fiction finisher**: Ryan (and users) ope
 - Never paywall PD books/chapters
 - Broader PD library/source is required later (dedicated trunks) — do not forget
 
-**Code reality (Flutter `~/dev/Flick/app`):** Story/Bounce, karaoke, extractive TLDR, OS TTS Listen, Drift library, RevenueCat “Plus” wired. Bundled samples today are Alice / Holmes / **Metamorphosis** — **not** the seed shelf; Kafka PG #5200 Wyllie is **not** safe to ship. Spec docs still say Plus $6.99/$49.99 — vault locks supersede until T08 lands.
+**Code reality (Flutter `~/dev/Flick/app`):** Story/Bounce, karaoke, extractive TLDR, OS TTS Listen, Drift library, the seed shelf, Bartleby dogfood, and RevenueCat Pro are wired. T08/T09 monetization is shipped; do not undo it. The next priority is UX/covers (T11–T14), with no further paywall work until that queue is finished.
 
 ## Shared branch workflow (all agents)
 
@@ -54,26 +54,28 @@ All cloud and local agents work on the shared trunk branch **`main`** (the repos
 
 | # | ID | Est | Status |
 |---|-----|-----|--------|
-| 1 | [T01-foundation-baseline](./trunks/T01-foundation-baseline.md) | S | ready |
-| 2 | [T02-seed-shelf-in-app](./trunks/T02-seed-shelf-in-app.md) | M | ready |
-| 3 | [T03-bartleby-dogfood-e2e](./trunks/T03-bartleby-dogfood-e2e.md) | M | ready |
-| 4 | [T04-listen-polish](./trunks/T04-listen-polish.md) | M | ready |
-| 5 | [T05-finish-shorts-polish](./trunks/T05-finish-shorts-polish.md) | M | ready |
-| 6 | [T06-pd-library-source-research](./trunks/T06-pd-library-source-research.md) | S | ready |
-| 7 | [T07-pd-catalog-browse-import](./trunks/T07-pd-catalog-browse-import.md) | M | ready |
-| 8 | [T08-pro-paywall-soft](./trunks/T08-pro-paywall-soft.md) | M | ready |
-| 9 | [T09-house-pro-prompts-v1](./trunks/T09-house-pro-prompts-v1.md) | S | ready |
+| 1 | [T01-foundation-baseline](./trunks/T01-foundation-baseline.md) | S | complete |
+| 2 | [T02-seed-shelf-in-app](./trunks/T02-seed-shelf-in-app.md) | M | complete |
+| 3 | [T03-bartleby-dogfood-e2e](./trunks/T03-bartleby-dogfood-e2e.md) | M | complete |
+| 4 | [T04-listen-polish](./trunks/T04-listen-polish.md) | M | complete |
+| 5 | [T05-finish-shorts-polish](./trunks/T05-finish-shorts-polish.md) | M | complete |
+| 6 | [T06-pd-library-source-research](./trunks/T06-pd-library-source-research.md) | S | complete |
+| 7 | [T07-pd-catalog-browse-import](./trunks/T07-pd-catalog-browse-import.md) | M | complete |
+| 8 | [T08-pro-paywall-soft](./trunks/T08-pro-paywall-soft.md) | M | complete |
+| 9 | [T09-house-pro-prompts-v1](./trunks/T09-house-pro-prompts-v1.md) | S | complete |
 | 10 | [T10-ads-phase2-parked](./trunks/T10-ads-phase2-parked.md) | M | **parked** — do not run until Ryan unlocks |
-| 11 | [T11-book-covers-source](./trunks/T11-book-covers-source.md) | S | ready — after T05/T06; research-only |
-| 12 | [T12-library-cover-grid-ux](./trunks/T12-library-cover-grid-ux.md) | M | ready — after T07 + T11 |
-| 13 | [T13-onboarding-empty-states](./trunks/T13-onboarding-empty-states.md) | S | **parked** — after early dogfood |
-| 14 | [T14-reader-chrome-polish](./trunks/T14-reader-chrome-polish.md) | S | ready — optional after T05 |
+| 11 | [T11-book-covers-source](./trunks/T11-book-covers-source.md) | S | ready — next |
+| 12 | [T12-library-cover-grid-ux](./trunks/T12-library-cover-grid-ux.md) | M | ready — after T11 |
+| 13 | [T13-onboarding-empty-states](./trunks/T13-onboarding-empty-states.md) | S | ready — after T03 dogfood (met) |
+| 14 | [T14-reader-chrome-polish](./trunks/T14-reader-chrome-polish.md) | S | ready — after T12 |
 
-**Backlog (not scheduled):** T13 onboarding/empty states until early dogfood proves they are needed; cloud premium voices inside Pro (after T08/T09); Standard Ebooks polish beyond cleared cover art; accounts/sync; Bounce algorithm; Phase 1.5 rewarded voice trial.
+**Backlog (not scheduled):** further monetization work, including cloud premium voices inside Pro, waits until the T11 → T12 → T13 → T14 UX queue finishes; Standard Ebooks polish beyond cleared cover art; accounts/sync; Bounce algorithm; Phase 1.5 rewarded voice trial. T10 remains parked until Ryan explicitly unlocks it.
+
+**Next queue (Ryan priority):** **T11 → T12 → T13 → T14** — UX/covers before further monetization. T11 is next; T12 follows T11; T13 is unlocked because T03 dogfood is complete; T14 follows T12 for the cover-consistency polish pass. **T08/T09 monetization is done; no further paywall work until this UX queue finishes. T10 remains parked.**
 
 **Cover policy (T11 → T12):** local generated typography is the guaranteed fallback and initial default; only individually rights-checked Standard Ebooks/museum CC0 art or permitted work-specific Gutenberg art may be bundled. Open Library and Google Books are lookup/research fallbacks, not assumed-cleared runtime assets.
 
 ## How to pick work
 1. Open `SESSION.md`.
-2. Take the **first ready trunk** whose deps are met (or the ID Ryan named).
+2. Take the **first ready trunk in the current T11–T14 queue** whose deps are met (or the ID Ryan named).
 3. Stop when acceptance tests pass or the session budget is spent — write handoff, don’t stretch into the next ID.

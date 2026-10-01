@@ -16,8 +16,8 @@ tags: [flick, trunk, reader, ux, polish]
 | --- | --- |
 | **ID** | `T14-reader-chrome-polish` |
 | **Estimate** | S |
-| **Deps** | `T05` and a working seed-shelf dogfood path |
-| **Status** | ready — optional after core dogfood |
+| **Deps** | `T12` (cover-consistency polish pass) |
+| **Status** | ready — after T12 |
 
 ## Goal
 Make it easier to resume a book and understand progress while keeping the reader quiet, fast, and focused.

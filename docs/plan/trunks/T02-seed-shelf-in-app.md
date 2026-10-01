@@ -3,7 +3,7 @@ date: 2026-10-01
 source: chat
 origin: ai
 type: plan
-status: ready
+status: complete
 derived_from: [projects/flick/ROADMAP.md]
 generated_by: AI agent (Forge trunks)
 reviewed: false
@@ -18,7 +18,7 @@ tags: [flick, trunk, t02-seed-shelf-in-app]
 | **ID** | `T02-seed-shelf-in-app` |
 | **Estimate** | M |
 | **Deps** | `T01` recommended (rights awareness); can start if Kafka risk is understood |
-| **Status** | ready |
+| **Status** | complete |
 
 ## Goal
 Replace prototype samples with Ryan’s seed shelf so the Library dogfoods real PD fiction — **Bartleby must be present**.

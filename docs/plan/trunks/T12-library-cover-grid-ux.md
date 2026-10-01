@@ -16,7 +16,7 @@ tags: [flick, trunk, library, covers, ux]
 | --- | --- |
 | **ID** | `T12-library-cover-grid-ux` |
 | **Estimate** | M |
-| **Deps** | `T07` and `T11` |
+| **Deps** | `T11` (`T07` is complete) |
 | **Status** | ready |
 
 ## Goal

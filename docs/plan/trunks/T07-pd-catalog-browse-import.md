@@ -3,7 +3,7 @@ date: 2026-10-01
 source: chat
 origin: ai
 type: plan
-status: ready
+status: complete
 derived_from: [projects/flick/ROADMAP.md]
 generated_by: AI agent (Forge trunks)
 reviewed: false
