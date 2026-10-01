@@ -10,7 +10,7 @@
 # Sync discards uncommitted local edits on tracked files (like to-phone.sh).
 #
 # Optional:
-#   FLICK_SIMULATOR="iPhone 16 Pro" bash scripts/to-simulator.sh
+#   FLICK_SIMULATOR="iPhone 17 Pro" bash scripts/to-simulator.sh
 #   FLICK_KEEP_LOCAL=1 bash scripts/to-simulator.sh
 #   FLICK_TEST=1 bash scripts/to-simulator.sh
 #   FLICK_FALLBACK_MACOS=1 bash scripts/to-simulator.sh   # if no iOS sim (not ideal)
@@ -77,47 +77,74 @@ open_ios_simulator() {
   return 1
 }
 
-boot_named_simulator() {
-  local name="$1"
-  [[ -n "$name" ]] || return 1
-  if ! command -v xcrun >/dev/null 2>&1; then
-    return 1
-  fi
-  local udid
-  udid="$(xcrun simctl list devices available | grep -F "$name (" | head -1 | sed -E 's/.*\(([A-F0-9-]+)\).*/\1/')"
-  if [[ -z "$udid" ]]; then
-    echo "No simulator named: $name" >&2
-    return 1
-  fi
-  echo "==> Boot simulator: $name ($udid)"
-  xcrun simctl boot "$udid" 2>/dev/null || true
-  xcrun simctl bootstatus "$udid" -b 2>/dev/null || sleep 3
-}
-
-boot_first_iphone_simulator() {
-  command -v xcrun >/dev/null 2>&1 || return 1
-  local line udid name
-  line="$(xcrun simctl list devices available | grep -E 'iPhone.*\([A-F0-9-]+\)' | grep -v unavailable | head -1 || true)"
-  [[ -n "$line" ]] || return 1
-  udid="$(echo "$line" | sed -E 's/.*\(([A-F0-9-]+)\).*/\1/')"
-  name="$(echo "$line" | sed -E 's/^[[:space:]]*(.+)[[:space:]]+\([A-F0-9-]+\).*/\1/')"
-  echo "==> Boot simulator: $name ($udid)"
-  xcrun simctl boot "$udid" 2>/dev/null || true
-  xcrun simctl bootstatus "$udid" -b 2>/dev/null || sleep 3
-}
-
 pick_flutter_ios_device() {
-  # Prefer a booted iOS simulator (handles wrapped `flutter devices` tables).
   python3 - <<'PY' 2>/dev/null
-import json, subprocess
+import json, re, subprocess
 raw = subprocess.check_output(["flutter", "devices", "--machine"], text=True)
-devices = json.loads(raw)
-booted = [d for d in devices if d.get("emulator") and d.get("targetPlatform") == "ios"]
-if not booted:
+devices = [d for d in json.loads(raw) if d.get("emulator") and d.get("targetPlatform") == "ios"]
+if not devices:
     raise SystemExit(1)
-# Prefer already-booted sim; else first listed.
-booted.sort(key=lambda d: (not d.get("ephemeral", True), d.get("name", "")))
-print(booted[0]["id"])
+
+def iphone_num(name: str) -> int:
+    m = re.search(r"iPhone (\d+)", name or "")
+    return int(m.group(1)) if m else 0
+
+# Prefer the newest iPhone model Flutter already sees (usually the booted sim).
+devices.sort(key=lambda d: iphone_num(d.get("name", "")), reverse=True)
+print(devices[0]["id"])
+PY
+}
+
+simctl_boot_if_needed() {
+  local want_name="${1:-}"
+  python3 - "$want_name" <<'PY'
+import json, re, subprocess, sys
+
+want = sys.argv[1].strip()
+
+def iphone_num(name: str) -> int:
+    m = re.search(r"iPhone (\d+)", name or "")
+    return int(m.group(1)) if m else 0
+
+data = json.loads(
+    subprocess.check_output(["xcrun", "simctl", "list", "devices", "available", "-j"], text=True)
+)
+candidates = []
+for runtime, devs in data.get("devices", {}).items():
+    if "iOS" not in runtime:
+        continue
+    for d in devs:
+        if not d.get("isAvailable", True):
+            continue
+        name = d.get("name", "")
+        if "iPhone" not in name:
+            continue
+        candidates.append(d)
+
+if not candidates:
+    raise SystemExit(1)
+
+booted = [d for d in candidates if d.get("state") == "Booted"]
+if booted:
+    booted.sort(key=lambda d: iphone_num(d["name"]), reverse=True)
+    d = booted[0]
+    print(f'==> Using booted simulator: {d["name"]} ({d["udid"]})', flush=True)
+    raise SystemExit(0)
+
+if want:
+    matches = [d for d in candidates if d["name"] == want]
+    if not matches:
+        print(f"No simulator named: {want}", file=sys.stderr)
+        raise SystemExit(1)
+    pick = matches[0]
+else:
+    candidates.sort(key=lambda d: iphone_num(d["name"]), reverse=True)
+    pick = candidates[0]
+
+udid = pick["udid"]
+name = pick["name"]
+print(f"==> Boot simulator: {name} ({udid})", flush=True)
+subprocess.run(["xcrun", "simctl", "boot", udid], check=False)
 PY
 }
 
@@ -137,13 +164,15 @@ FLUTTER_DEVICE=""
 
 if require_xcode_for_ios; then
   open_ios_simulator || true
-  if [[ -n "$SIM_NAME" ]]; then
-    boot_named_simulator "$SIM_NAME" || true
-  else
-    boot_first_iphone_simulator || true
-  fi
-  sleep 2
+  # If a sim is already booted (e.g. iPhone 17 Pro), do not boot a random older one.
   FLUTTER_DEVICE="$(pick_flutter_ios_device || true)"
+  if [[ -z "$FLUTTER_DEVICE" ]]; then
+    simctl_boot_if_needed "$SIM_NAME" || true
+    sleep 4
+    FLUTTER_DEVICE="$(pick_flutter_ios_device || true)"
+  else
+    echo "==> Flutter already sees an iOS simulator — skipping simctl boot"
+  fi
 fi
 
 if [[ -z "$FLUTTER_DEVICE" ]]; then
