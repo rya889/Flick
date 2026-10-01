@@ -4,6 +4,7 @@ import 'package:provider/provider.dart';
 import '../models/models.dart';
 import '../models/reader_sync.dart';
 import '../state/flick_controller.dart';
+import 'house_pro_prompt.dart';
 import 'paywall_sheet.dart';
 import 'sync_sheet.dart';
 
@@ -74,22 +75,33 @@ class SettingsSheet extends StatelessWidget {
             ),
             ListTile(
               contentPadding: EdgeInsets.zero,
-              title: Text(c.plusActive ? 'Flick Premium · active' : 'Flick Premium'),
+              title: Text(c.plusActive ? 'Flick Pro · active' : 'Flick Pro'),
               subtitle: Text(
                 c.plusActive
-                    ? '50 books · EPUB, TXT, and paste'
-                    : 'Free · 2 books · TXT and paste. Premium adds EPUB and a larger library.',
+                    ? '50 books · EPUB · unlimited Listen · voices'
+                    : r'Free · 2 imports · 60 min Listen/day. Pro $4.99/mo or $29.99/yr.',
               ),
               trailing: const Icon(Icons.chevron_right),
-              onTap: () => showPaywallSheet(
+              onTap: () => showHouseProPrompt(
                 context,
-                reason: PaywallReason.settings,
+                placement: HouseProPlacement.settings,
               ),
             ),
+            if (!c.plusActive && c.listenVoiceIsBasic)
+              ListTile(
+                contentPadding: EdgeInsets.zero,
+                leading: const Icon(Icons.record_voice_over_outlined),
+                title: const Text('Natural Listen voices'),
+                subtitle: const Text('Pro perk — public-domain text stays free'),
+                onTap: () => showHouseProPrompt(
+                  context,
+                  placement: HouseProPlacement.voiceTease,
+                ),
+              ),
             if (c.plusActive && c.plusService.demoActive)
               TextButton(
                 onPressed: () => c.setPlusDemo(false),
-                child: const Text('Turn off Premium on this device'),
+                child: const Text('Turn off Pro on this device'),
               ),
             const SizedBox(height: 8),
             Text(
