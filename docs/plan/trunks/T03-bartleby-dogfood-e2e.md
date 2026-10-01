@@ -18,7 +18,7 @@ tags: [flick, trunk, t03-bartleby-dogfood-e2e]
 | **ID** | `T03-bartleby-dogfood-e2e` |
 | **Estimate** | M |
 | **Deps** | `T02` (Bartleby must exist as sample) |
-| **Status** | ready |
+| **Status** | complete |
 
 ## Goal
 One sitting path: Library → Bartleby → Story shorts → Listen → **Finish** celebration/state. This is the wedge proof.
@@ -39,11 +39,11 @@ One sitting path: Library → Bartleby → Story shorts → Listen → **Finish*
 - Ads / Pro soft prompts
 
 ## Acceptance tests
-- [ ] Ryan (or agent on device/sim) completes Bartleby Story path without importing files.
-- [ ] Listen works on ≥1 short during that path.
-- [ ] Finish state visible when book completes.
-- [ ] PD text never blocked by paywall.
-- [ ] Notes: Finish rate / friction bullets in handoff for Ryan.
+- [x] Ryan (or agent on device/sim) completes Bartleby Story path without importing files.
+- [x] Listen works on ≥1 short during that path.
+- [x] Finish state visible when book completes.
+- [x] PD text never blocked by paywall.
+- [x] Notes: Finish rate / friction bullets in handoff for Ryan.
 
 ## Files likely touched
 - `app/lib/screens/library_screen.dart`
@@ -53,5 +53,5 @@ One sitting path: Library → Bartleby → Story shorts → Listen → **Finish*
 - `app/test/ux_flows_test.dart` or new dogfood test
 
 ## Handoff note (fill when done)
-- Next: **T04-listen-polish** (or T05 if Listen is “good enough”).
-- Paste friction notes + any Finish UX screenshot paths.
+- Done 2026-10-01 — [`docs/T03-handoff.md`](../../T03-handoff.md).
+- Next: **T04-listen-polish**.
