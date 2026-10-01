@@ -2,6 +2,8 @@
 
 These documents are the **source of truth** for the Flick redesign. Prefer them over chat history and over the archived web prototype.
 
+**AI execution plan:** cloud agents should start with [`plan/SESSION.md`](./plan/SESSION.md), then read exactly one [`plan/trunks/`](./plan/trunks/) file. See [`plan/CLOUD-AGENT.md`](./plan/CLOUD-AGENT.md).
+
 | Doc | Contents |
 |-----|----------|
 | [01-product-design-spec.md](./01-product-design-spec.md) | Problem, users, jobs, modes, monetization, v1 scope |
