@@ -61,9 +61,9 @@ Assume context = code + docs + tools burns fast.
 - [ ] Handoff written; CATALOG/INDEX updated if you added durable notes
 - [ ] Keep durable handoff notes in this in-repo plan; no thought-repo or vault access is required
 
-## Current next queue — UX/covers first
+## Current next queue
 
-`T01`–`T09` are complete. Pick the first ready trunk in this order: **T11 → T12 → T13 → T14**. T11 is next; T12 follows T11; T13 is unlocked because T03 dogfood is complete; T14 follows T12 for the cover-consistency polish pass. T08/T09 monetization is shipped; do not start further paywall work until this UX queue finishes. T10 remains parked.
+`T01`–`T14` are complete (including UX/covers). **Do not** start T10 without Ryan unlock. Open [`post-ux-queue.md`](./post-ux-queue.md) and implement **one** theme Ryan chooses (or a new trunk file). T08/T09 paywall is shipped; avoid paywall churn unless asked.
 
 ## Ryan dogfood bar (early trunks)
 Through **T03**, success means Ryan can: open app → see **Bartleby** on the shelf → Story-swipe → Listen → reach a **Finish** moment in one sitting. Later trunks must not regress that path.

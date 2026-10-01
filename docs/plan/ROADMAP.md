@@ -64,14 +64,14 @@ All cloud and local agents work on the shared trunk branch **`main`** (the repos
 | 8 | [T08-pro-paywall-soft](./trunks/T08-pro-paywall-soft.md) | M | complete |
 | 9 | [T09-house-pro-prompts-v1](./trunks/T09-house-pro-prompts-v1.md) | S | complete |
 | 10 | [T10-ads-phase2-parked](./trunks/T10-ads-phase2-parked.md) | M | **parked** — do not run until Ryan unlocks |
-| 11 | [T11-book-covers-source](./trunks/T11-book-covers-source.md) | S | ready — next |
-| 12 | [T12-library-cover-grid-ux](./trunks/T12-library-cover-grid-ux.md) | M | ready — after T11 |
-| 13 | [T13-onboarding-empty-states](./trunks/T13-onboarding-empty-states.md) | S | ready — after T03 dogfood (met) |
-| 14 | [T14-reader-chrome-polish](./trunks/T14-reader-chrome-polish.md) | S | ready — after T12 |
+| 11 | [T11-book-covers-source](./trunks/T11-book-covers-source.md) | S | complete |
+| 12 | [T12-library-cover-grid-ux](./trunks/T12-library-cover-grid-ux.md) | M | complete |
+| 13 | [T13-onboarding-empty-states](./trunks/T13-onboarding-empty-states.md) | S | complete |
+| 14 | [T14-reader-chrome-polish](./trunks/T14-reader-chrome-polish.md) | S | complete |
 
 **Backlog (not scheduled):** further monetization work, including cloud premium voices inside Pro, waits until the T11 → T12 → T13 → T14 UX queue finishes; Standard Ebooks polish beyond cleared cover art; accounts/sync; Bounce algorithm; Phase 1.5 rewarded voice trial. T10 remains parked until Ryan explicitly unlocks it.
 
-**Next queue (Ryan priority):** **T11 → T12 → T13 → T14** — UX/covers before further monetization. T11 is next; T12 follows T11; T13 is unlocked because T03 dogfood is complete; T14 follows T12 for the cover-consistency polish pass. **T08/T09 monetization is done; no further paywall work until this UX queue finishes. T10 remains parked.**
+**Next queue:** UX trunks **T11–T14 are complete.** See [post-ux-queue](./post-ux-queue.md) for backlog options (bundled cover art, sync polish, Bounce, premium voices, etc.). **T10 remains parked** until Ryan unlocks.
 
 **Cover policy (T11 → T12):** local generated typography is the guaranteed fallback and initial default; only individually rights-checked Standard Ebooks/museum CC0 art or permitted work-specific Gutenberg art may be bundled. Open Library and Google Books are lookup/research fallbacks, not assumed-cleared runtime assets.
 

@@ -214,10 +214,10 @@ class _TypographyCover extends StatelessWidget {
     Color onDark,
     Color ink,
   ) {
-    final pad = (width * 0.1).clamp(14.0, 20.0);
-    final titleSize = (width * 0.115).clamp(18.0, 25.0);
-    final authorSize = (titleSize * 0.58).clamp(11.0, 14.0);
-    final ruleWidth = (width * 0.22).clamp(28.0, 44.0);
+    final pad = (width * 0.09).clamp(12.0, 18.0);
+    final titleSize = (width * 0.135).clamp(20.0, 30.0);
+    final authorSize = (titleSize * 0.56).clamp(12.0, 16.0);
+    final ruleWidth = (width * 0.26).clamp(32.0, 52.0);
 
     return Padding(
       padding: EdgeInsets.fromLTRB(pad, pad * 0.95, pad, pad * 0.9),

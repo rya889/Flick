@@ -596,7 +596,7 @@ class _ShelfCoverGrid extends StatelessWidget {
         crossAxisCount: 2,
         mainAxisSpacing: 12,
         crossAxisSpacing: 12,
-        childAspectRatio: 0.56,
+        childAspectRatio: 0.48,
       ),
       itemCount: books.length,
       itemBuilder: (context, index) => _ShelfBookCard(book: books[index]),
@@ -642,7 +642,7 @@ class _ShelfBookCard extends StatelessWidget {
               ),
             ),
             Padding(
-              padding: const EdgeInsets.fromLTRB(10, 6, 6, 8),
+              padding: const EdgeInsets.fromLTRB(10, 4, 6, 6),
               child: Row(
                 children: [
                   Expanded(

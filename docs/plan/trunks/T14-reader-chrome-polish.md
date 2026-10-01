@@ -2,7 +2,7 @@
 date: 2026-10-01
 source: plan
 origin: chat
-status: ready
+status: complete
 derived_from: [projects/flick/ROADMAP.md, projects/flick/trunks/T05-finish-shorts-polish.md]
 generated_by: AI agent
 reviewed: false
@@ -17,7 +17,7 @@ tags: [flick, trunk, reader, ux, polish]
 | **ID** | `T14-reader-chrome-polish` |
 | **Estimate** | S |
 | **Deps** | `T12` (cover-consistency polish pass) |
-| **Status** | ready — after T12 |
+| **Status** | complete |
 
 ## Goal
 Make it easier to resume a book and understand progress while keeping the reader quiet, fast, and focused.

@@ -21,4 +21,4 @@ If a trunk is blocked or the remaining work belongs to another trunk, stop and r
 
 ## Current next queue
 
-The UX/covers queue is **T11 → T12 → T13 → T14**. T08/T09 monetization is already shipped; do not start further paywall work before this queue. T10 remains parked.
+**T11–T14 (UX/covers) are complete.** Read [`post-ux-queue.md`](./post-ux-queue.md) and wait for Ryan to pick the next theme (or trunk). T10 remains parked.
