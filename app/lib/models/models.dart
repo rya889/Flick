@@ -212,6 +212,9 @@ class SampleMeta {
   final double hue;
 }
 
+/// Day-0 dogfood title (first in shelf order).
+const kBartlebySampleId = 'sample-bartleby';
+
 /// Public-domain seed shelf (Gutenberg US). See docs/plan/seed-shelf-2026-10-01.md.
 const sampleLibrary = [
   SampleMeta(

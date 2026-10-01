@@ -221,6 +221,7 @@ class _NowPlayerState extends State<NowPlayer> {
                 },
               ),
               const HeartBurstOverlay(),
+              if (c.showFinishCelebration) const _FinishCelebrationOverlay(),
               if (!c.playing)
                 const IgnorePointer(
                   child: _PausePlayOverlay(),
@@ -357,6 +358,70 @@ class _ChromeBar extends StatelessWidget {
             ],
           ),
         ],
+      ),
+    );
+  }
+}
+
+class _FinishCelebrationOverlay extends StatelessWidget {
+  const _FinishCelebrationOverlay();
+
+  @override
+  Widget build(BuildContext context) {
+    final c = context.watch<FlickController>();
+    final title = c.finishCelebrationTitle ?? 'This book';
+    final scheme = Theme.of(context).colorScheme;
+    return Material(
+      color: scheme.scrim.withValues(alpha: 0.72),
+      child: Center(
+        child: Padding(
+          padding: const EdgeInsets.all(28),
+          child: DecoratedBox(
+            decoration: BoxDecoration(
+              color: scheme.surface,
+              borderRadius: BorderRadius.circular(24),
+              border: Border.all(color: scheme.primary.withValues(alpha: 0.35)),
+            ),
+            child: Padding(
+              padding: const EdgeInsets.fromLTRB(24, 28, 24, 20),
+              child: Column(
+                mainAxisSize: MainAxisSize.min,
+                children: [
+                  Icon(Icons.celebration_outlined, size: 56, color: scheme.primary),
+                  const SizedBox(height: 16),
+                  Text(
+                    'Finished!',
+                    style: Theme.of(context).textTheme.headlineMedium,
+                  ),
+                  const SizedBox(height: 8),
+                  Text(
+                    title,
+                    textAlign: TextAlign.center,
+                    style: Theme.of(context).textTheme.titleMedium,
+                  ),
+                  const SizedBox(height: 8),
+                  Text(
+                    'You made it through every short. Anti-doomscroll win.',
+                    textAlign: TextAlign.center,
+                    style: Theme.of(context).textTheme.bodyMedium,
+                  ),
+                  const SizedBox(height: 24),
+                  FilledButton(
+                    onPressed: () {
+                      c.dismissFinishCelebration();
+                      c.setTab(1);
+                    },
+                    child: const Text('Back to Library'),
+                  ),
+                  TextButton(
+                    onPressed: c.dismissFinishCelebration,
+                    child: const Text('Stay on this short'),
+                  ),
+                ],
+              ),
+            ),
+          ),
+        ),
       ),
     );
   }

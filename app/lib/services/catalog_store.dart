@@ -127,6 +127,10 @@ class CatalogStore {
   Future<void> saveHearts(Set<String> ids) => _saveIdSet('hearts', ids);
   Future<Set<String>> loadSaves() async => _loadIdSet('saves');
   Future<void> saveSaves(Set<String> ids) => _saveIdSet('saves', ids);
+  Future<Set<String>> loadCompletedBooks() async =>
+      _loadIdSet('completedBooks');
+  Future<void> saveCompletedBooks(Set<String> ids) =>
+      _saveIdSet('completedBooks', ids);
 
   Future<({String day, int seconds})> loadListen() async {
     final day = await _getMeta('listen.day');

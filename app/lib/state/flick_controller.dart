@@ -14,6 +14,7 @@ import '../services/library_access.dart';
 import '../services/progress_bridge.dart';
 import '../services/plus_service.dart';
 import '../services/tldr_api.dart';
+import '../services/book_finish.dart';
 import '../services/tts_voice.dart';
 
 class FeedItem {
@@ -50,6 +51,9 @@ class FlickController extends ChangeNotifier {
   Map<String, ReadingProgress> progress = {};
   Set<String> hearts = {};
   Set<String> saves = {};
+  Set<String> completedBookIds = {};
+  bool showFinishCelebration = false;
+  String? finishCelebrationTitle;
 
   LibraryBook? activeBook;
   List<FeedItem> queue = [];
@@ -132,7 +136,8 @@ class FlickController extends ChangeNotifier {
     return max(0, freeListenCapSeconds - listenSecondsToday);
   }
 
-  bool get listenCapped => false;
+  bool get listenCapped =>
+      !plusActive && listenSecondsToday >= freeListenCapSeconds;
 
   void reportBootstrapError(Object error) {
     bootstrapError = error.toString();
@@ -169,6 +174,7 @@ class FlickController extends ChangeNotifier {
     progress = await _store.loadProgress();
     hearts = await _store.loadHearts();
     saves = await _store.loadSaves();
+    completedBookIds = await _store.loadCompletedBooks();
     final listen = await _store.loadListen();
     listenDay = listen.day;
     listenSecondsToday = listen.day == _todayKey() ? listen.seconds : 0;
@@ -334,6 +340,19 @@ class FlickController extends ChangeNotifier {
     unawaited(ensureAiTldrForCurrent());
   }
 
+  Future<void> openBartlebyStory() async {
+    final sample = sampleLibrary.firstWhere((s) => s.id == kBartlebySampleId);
+    await addSample(sample);
+  }
+
+  bool isBookCompleted(String bookId) => completedBookIds.contains(bookId);
+
+  void dismissFinishCelebration() {
+    showFinishCelebration = false;
+    finishCelebrationTitle = null;
+    notifyListeners();
+  }
+
   Future<void> addSample(SampleMeta sample) async {
     if (books.any((b) => b.id == sample.id)) {
       final existing = books.firstWhere((b) => b.id == sample.id);
@@ -470,6 +489,7 @@ class FlickController extends ChangeNotifier {
         queue = _buildBounceQueue();
         queueIndex = 0;
       } else {
+        _celebrateStoryFinishIfNeeded();
         return;
       }
     } else {
@@ -1117,6 +1137,27 @@ class FlickController extends ChangeNotifier {
     if (loc == null) return;
     readerLocations[item.book.id] = loc;
     await _store.saveReaderLocations(readerLocations);
+  }
+
+  void _celebrateStoryFinishIfNeeded() {
+    final item = current;
+    if (item == null) return;
+    if (!shouldCelebrateStoryFinish(
+      mode: playMode,
+      queueIndex: queueIndex,
+      queueLength: queue.length,
+    )) {
+      return;
+    }
+    if (completedBookIds.contains(item.book.id)) return;
+    completedBookIds.add(item.book.id);
+    unawaited(_store.saveCompletedBooks(completedBookIds));
+    playing = false;
+    _karaokeTimer?.cancel();
+    unawaited(_tts.stop());
+    finishCelebrationTitle = item.book.title;
+    showFinishCelebration = true;
+    notifyListeners();
   }
 
   void _persistProgress() {

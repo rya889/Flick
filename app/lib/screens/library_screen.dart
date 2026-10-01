@@ -80,10 +80,20 @@ class _LibraryScreenState extends State<LibraryScreen> {
               ? _EmptyLibrary(
                   onAddBook: () => _showAddBook(context),
                   onAddSamples: () => c.seedSamples(),
+                  onStartBartleby: () => c.openBartlebyStory(),
                 )
               : ListView(
                   padding: const EdgeInsets.fromLTRB(16, 0, 16, 24),
                   children: [
+                    if (c.books.any((b) => b.id == kBartlebySampleId))
+                      _BartlebyDogfoodCard(
+                        completed: c.isBookCompleted(kBartlebySampleId),
+                        onStory: () async {
+                          final book = c.books
+                              .firstWhere((b) => b.id == kBartlebySampleId);
+                          await c.openBook(book);
+                        },
+                      ),
                     Text(
                       'Samples',
                       style: Theme.of(context).textTheme.titleMedium,
@@ -344,14 +354,72 @@ class _LibraryScreenState extends State<LibraryScreen> {
   }
 }
 
+class _BartlebyDogfoodCard extends StatelessWidget {
+  const _BartlebyDogfoodCard({
+    required this.completed,
+    required this.onStory,
+  });
+
+  final bool completed;
+  final VoidCallback onStory;
+
+  @override
+  Widget build(BuildContext context) {
+    final scheme = Theme.of(context).colorScheme;
+    return Padding(
+      padding: const EdgeInsets.only(bottom: 16),
+      child: Material(
+        color: scheme.primaryContainer.withValues(alpha: 0.45),
+        borderRadius: BorderRadius.circular(16),
+        child: InkWell(
+          borderRadius: BorderRadius.circular(16),
+          onTap: onStory,
+          child: Padding(
+            padding: const EdgeInsets.all(16),
+            child: Row(
+              children: [
+                Expanded(
+                  child: Column(
+                    crossAxisAlignment: CrossAxisAlignment.start,
+                    children: [
+                      Text(
+                        completed ? 'Bartleby — finished' : 'Start with Bartleby',
+                        style: Theme.of(context).textTheme.titleMedium,
+                      ),
+                      const SizedBox(height: 4),
+                      Text(
+                        completed
+                            ? 'Replay Story shorts or open the full reader.'
+                            : 'One-tap Story path — swipe shorts, tap Listen, finish the book.',
+                        style: Theme.of(context).textTheme.bodyMedium,
+                      ),
+                    ],
+                  ),
+                ),
+                Icon(
+                  completed ? Icons.check_circle : Icons.play_circle_fill,
+                  color: scheme.primary,
+                  size: 40,
+                ),
+              ],
+            ),
+          ),
+        ),
+      ),
+    );
+  }
+}
+
 class _EmptyLibrary extends StatelessWidget {
   const _EmptyLibrary({
     required this.onAddBook,
     required this.onAddSamples,
+    required this.onStartBartleby,
   });
 
   final VoidCallback onAddBook;
   final VoidCallback onAddSamples;
+  final VoidCallback onStartBartleby;
 
   @override
   Widget build(BuildContext context) {
@@ -373,6 +441,11 @@ class _EmptyLibrary extends StatelessWidget {
             ),
             const SizedBox(height: 24),
             FilledButton(
+              onPressed: onStartBartleby,
+              child: const Text('Start with Bartleby'),
+            ),
+            const SizedBox(height: 12),
+            FilledButton.tonal(
               onPressed: onAddBook,
               child: const Text('Add book'),
             ),
@@ -400,7 +473,11 @@ class _SampleTile extends StatelessWidget {
       contentPadding: EdgeInsets.zero,
       leading: _Cover(hue: sample.hue),
       title: Text(sample.title),
-      subtitle: Text(sample.author),
+      subtitle: Text(
+        sample.id == kBartlebySampleId
+            ? '${sample.author} · recommended start'
+            : sample.author,
+      ),
       trailing: inLibrary
           ? IconButton(
               tooltip: 'Read',
@@ -462,6 +539,7 @@ class _BookTile extends StatelessWidget {
                       Text(
                         [
                           if (book.author != null) book.author!,
+                          if (c.isBookCompleted(book.id)) 'Finished',
                           book.source.name.toUpperCase(),
                           if (prog != null) 'Flick #${prog.shortIndex + 1}',
                         ].join(' · '),
