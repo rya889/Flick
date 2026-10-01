@@ -107,8 +107,18 @@ boot_first_iphone_simulator() {
 }
 
 pick_flutter_ios_device() {
-  # Prefer a booted iOS simulator (not physical device).
-  flutter devices 2>/dev/null | grep -E 'simulator' | grep -i ios | head -1 | sed -E 's/^[[:space:]]*([^•]+)[[:space:]]+•[[:space:]]*([^[:space:]]+).*/\2/' | tr -d '[:space:]'
+  # Prefer a booted iOS simulator (handles wrapped `flutter devices` tables).
+  python3 - <<'PY' 2>/dev/null
+import json, subprocess
+raw = subprocess.check_output(["flutter", "devices", "--machine"], text=True)
+devices = json.loads(raw)
+booted = [d for d in devices if d.get("emulator") and d.get("targetPlatform") == "ios"]
+if not booted:
+    raise SystemExit(1)
+# Prefer already-booted sim; else first listed.
+booted.sort(key=lambda d: (not d.get("ephemeral", True), d.get("name", "")))
+print(booted[0]["id"])
+PY
 }
 
 require_xcode_for_ios() {
