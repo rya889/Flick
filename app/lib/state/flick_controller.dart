@@ -15,6 +15,8 @@ import '../services/progress_bridge.dart';
 import '../services/plus_service.dart';
 import '../services/tldr_api.dart';
 import '../services/book_finish.dart';
+import '../services/gutenberg_catalog.dart';
+import '../services/listen_cap.dart';
 import '../services/tts_voice.dart';
 
 class FeedItem {
@@ -34,6 +36,7 @@ class FlickController extends ChangeNotifier {
   final CatalogStore _store;
   final PlusService _plus;
   final TldrApi _tldrApi;
+  final GutenbergCatalogClient _gutenberg = GutenbergCatalogClient();
   final FlutterTts _tts = FlutterTts();
   final _rng = Random();
 
@@ -97,7 +100,7 @@ class FlickController extends ChangeNotifier {
 
   PlusService get plusService => _plus;
 
-  static const freeListenCapSeconds = 60 * 60;
+  static const freeListenCapSeconds = freeListenDailyCapSeconds;
 
   FeedItem? get current =>
       queue.isEmpty || queueIndex < 0 || queueIndex >= queue.length
@@ -136,8 +139,10 @@ class FlickController extends ChangeNotifier {
     return max(0, freeListenCapSeconds - listenSecondsToday);
   }
 
-  bool get listenCapped =>
-      !plusActive && listenSecondsToday >= freeListenCapSeconds;
+  bool get listenCapped => isListenCapped(
+        plusActive: plusActive,
+        listenSecondsToday: listenSecondsToday,
+      );
 
   void reportBootstrapError(Object error) {
     bootstrapError = error.toString();
@@ -183,6 +188,8 @@ class FlickController extends ChangeNotifier {
       listenSecondsToday = 0;
       await _store.saveListen(listenDay, 0);
     }
+    muted = await _store.listenMuted;
+    listening = !muted;
 
     for (final book in books) {
       shortsByBook[book.id] = await _store.loadShorts(book.id);
@@ -367,6 +374,42 @@ class FlickController extends ChangeNotifier {
     await openBook(book);
     tabIndex = 0;
     notifyListeners();
+  }
+
+  /// Returns an error message, or null on success.
+  Future<String?> importFromCatalog(PdCatalogBook entry) async {
+    final block = blockFor(BookSource.catalog);
+    if (block == LibraryBlock.bookCap) {
+      return 'Library is full on the free tier. Remove a book or upgrade to Pro.';
+    }
+    if (block == LibraryBlock.extensionLocked) {
+      return 'Import blocked.';
+    }
+    final id = 'gutenberg-${entry.id}';
+    if (books.any((b) => b.id == id)) {
+      await openBook(books.firstWhere((b) => b.id == id));
+      tabIndex = 0;
+      notifyListeners();
+      return null;
+    }
+    try {
+      final text = await _gutenberg.downloadPlainText(entry.textUrl);
+      final book = await _store.importCatalogBook(
+        id: id,
+        title: entry.title,
+        author: entry.authorLabel,
+        text: text,
+        hue: 16 + (entry.id % 48).toDouble(),
+      );
+      books = [book, ...books];
+      shortsByBook[book.id] = await _store.loadShorts(book.id);
+      await openBook(book);
+      tabIndex = 0;
+      notifyListeners();
+      return null;
+    } catch (e) {
+      return 'Could not download this title. Try again later.';
+    }
   }
 
   Future<void> importPaste(String title, String text) async {
@@ -858,6 +901,7 @@ class FlickController extends ChangeNotifier {
       }
       muted = false;
       listening = true;
+      unawaited(_store.setListenMuted(false));
       _karaokeTimer?.cancel();
       if (playing) {
         await _speakFromWord(karaokeWord >= 0 ? karaokeWord : 0);
@@ -866,6 +910,7 @@ class FlickController extends ChangeNotifier {
     } else {
       muted = true;
       listening = false;
+      unawaited(_store.setListenMuted(true));
       await _tts.stop();
       _stopListenMeter();
       if (playing) {
@@ -1014,8 +1059,10 @@ class FlickController extends ChangeNotifier {
       if (listenSecondsToday >= freeListenCapSeconds) {
         muted = true;
         listening = false;
+        unawaited(_store.setListenMuted(true));
         await _tts.stop();
         _stopListenMeter();
+        playing = false;
       }
       await _store.saveListen(_todayKey(), listenSecondsToday);
       notifyListeners();

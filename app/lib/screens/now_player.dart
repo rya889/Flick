@@ -2,7 +2,9 @@ import 'package:flutter/material.dart';
 import 'package:provider/provider.dart';
 
 import '../models/models.dart';
+import '../services/listen_cap.dart';
 import '../state/flick_controller.dart';
+import 'house_pro_prompt.dart';
 import 'paywall_sheet.dart';
 import 'shell.dart';
 
@@ -290,6 +292,17 @@ class _ChromeBar extends StatelessWidget {
       ),
       child: Column(
         children: [
+          if (!c.plusActive)
+            Padding(
+              padding: const EdgeInsets.only(bottom: 4),
+              child: Text(
+                c.listenCapped
+                    ? 'Free Listen cap reached — Pro for unlimited'
+                    : formatListenRemaining(c.listenRemainingSeconds),
+                textAlign: TextAlign.center,
+                style: Theme.of(context).textTheme.labelMedium,
+              ),
+            ),
           Row(
             children: [
               const Spacer(),
@@ -407,14 +420,28 @@ class _FinishCelebrationOverlay extends StatelessWidget {
                   ),
                   const SizedBox(height: 24),
                   FilledButton(
-                    onPressed: () {
+                    onPressed: () async {
                       c.dismissFinishCelebration();
-                      c.setTab(1);
+                      if (context.mounted && !c.plusActive) {
+                        await showHouseProPrompt(
+                          context,
+                          placement: HouseProPlacement.finish,
+                        );
+                      }
+                      if (context.mounted) c.setTab(1);
                     },
                     child: const Text('Back to Library'),
                   ),
                   TextButton(
-                    onPressed: c.dismissFinishCelebration,
+                    onPressed: () async {
+                      c.dismissFinishCelebration();
+                      if (context.mounted && !c.plusActive) {
+                        await showHouseProPrompt(
+                          context,
+                          placement: HouseProPlacement.finish,
+                        );
+                      }
+                    },
                     child: const Text('Stay on this short'),
                   ),
                 ],

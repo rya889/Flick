@@ -146,6 +146,12 @@ class CatalogStore {
     await _setMeta('listen.seconds', '$seconds');
   }
 
+  Future<bool> get listenMuted async =>
+      (await _getMeta('listen.muted')) != 'false';
+
+  Future<void> setListenMuted(bool value) =>
+      _setMeta('listen.muted', value ? 'true' : 'false');
+
   Future<String?> get lastBookId async => _getMeta('lastBook');
 
   Future<void> setLastBookId(String? id) async {
@@ -285,6 +291,29 @@ class CatalogStore {
         text: text,
         addedAt: DateTime.now(),
         coverHue: sample.hue,
+      ),
+    );
+  }
+
+  Future<LibraryBook> importCatalogBook({
+    required String id,
+    required String title,
+    required String text,
+    String? author,
+    double hue = 200,
+  }) async {
+    _assertPasteLimits(text, source: BookSource.catalog);
+    final rawTextRef = await writeTextBlob(id, text);
+    return _persistImportedBook(
+      LibraryBook(
+        id: id,
+        title: title.trim().isEmpty ? 'Untitled' : title.trim(),
+        author: author,
+        source: BookSource.catalog,
+        text: text,
+        addedAt: DateTime.now(),
+        coverHue: hue,
+        rawTextRef: rawTextRef,
       ),
     );
   }
