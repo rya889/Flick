@@ -48,6 +48,8 @@ Ads strategy + persona re-validate: [ads-and-audience-pricing-2026-10-01.md](./a
 **Next trunk to run:** `T01-foundation-baseline` (then T02 seed shelf → T03 Bartleby dogfood).
 
 **Seed shelf:** [seed-shelf-2026-10-01.md](./seed-shelf-2026-10-01.md)  
+**Cover/UX follow-ons:** `T11-book-covers-source` selects a rights-safe cover pipeline; `T12-library-cover-grid-ux` adds covers with a generated fallback; `T13` and `T14` are small optional empty-state/reader-chrome polish trunks. The generated typography cover is the default so early dogfood never depends on third-party image rights or network availability.
+
 **Code:** repository root (`../` from this plan; Flutter under `../app/`)
 
 ## Parked

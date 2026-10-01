@@ -61,5 +61,9 @@ Assume context = code + docs + tools burns fast.
 - [ ] Handoff written; CATALOG/INDEX updated if you added durable notes
 - [ ] Keep durable handoff notes in this in-repo plan; no thought-repo or vault access is required
 
+## Post-core cover and UX backlog
+
+Do not renumber or reorder `T01`–`T10`; `T02` may be running on another agent. The optional additions are intentionally `T11`–`T14`: run `T11-book-covers-source` after/alongside the T06 source decision, then `T12-library-cover-grid-ux` after T07; keep T13 parked until early dogfood exposes empty-state problems, and take T14 only as a bite-size post-T05 polish pass. No app feature code is implied by this planning update.
+
 ## Ryan dogfood bar (early trunks)
 Through **T03**, success means Ryan can: open app → see **Bartleby** on the shelf → Story-swipe → Listen → reach a **Finish** moment in one sitting. Later trunks must not regress that path.

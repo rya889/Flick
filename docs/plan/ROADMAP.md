@@ -64,8 +64,14 @@ All cloud and local agents work on the shared trunk branch **`main`** (the repos
 | 8 | [T08-pro-paywall-soft](./trunks/T08-pro-paywall-soft.md) | M | ready |
 | 9 | [T09-house-pro-prompts-v1](./trunks/T09-house-pro-prompts-v1.md) | S | ready |
 | 10 | [T10-ads-phase2-parked](./trunks/T10-ads-phase2-parked.md) | M | **parked** — do not run until Ryan unlocks |
+| 11 | [T11-book-covers-source](./trunks/T11-book-covers-source.md) | S | ready — after T05/T06; research-only |
+| 12 | [T12-library-cover-grid-ux](./trunks/T12-library-cover-grid-ux.md) | M | ready — after T07 + T11 |
+| 13 | [T13-onboarding-empty-states](./trunks/T13-onboarding-empty-states.md) | S | **parked** — after early dogfood |
+| 14 | [T14-reader-chrome-polish](./trunks/T14-reader-chrome-polish.md) | S | ready — optional after T05 |
 
-**Backlog (not scheduled):** cloud premium voices inside Pro (after T08/T09); Standard Ebooks polish; accounts/sync; Bounce algorithm; Phase 1.5 rewarded voice trial.
+**Backlog (not scheduled):** T13 onboarding/empty states until early dogfood proves they are needed; cloud premium voices inside Pro (after T08/T09); Standard Ebooks polish beyond cleared cover art; accounts/sync; Bounce algorithm; Phase 1.5 rewarded voice trial.
+
+**Cover policy (T11 → T12):** local generated typography is the guaranteed fallback and initial default; only individually rights-checked Standard Ebooks/museum CC0 art or permitted work-specific Gutenberg art may be bundled. Open Library and Google Books are lookup/research fallbacks, not assumed-cleared runtime assets.
 
 ## How to pick work
 1. Open `SESSION.md`.
