@@ -22,6 +22,16 @@ flutter run -d chrome          # fastest demo in this environment
 # flutter run -d ios
 ```
 
+## iOS Simulator (one command)
+
+From repo root (pulls `main`, opens Simulator, debug run):
+
+```bash
+cd ~/dev/Flick && bash scripts/to-simulator.sh
+```
+
+Optional: `FLICK_TEST=1` to run `flutter test` first; `FLICK_SIMULATOR="iPhone 16"` to pin a device.
+
 ## iPhone (physical device)
 
 See **[`../docs/04-deploy-and-secrets.md`](../docs/04-deploy-and-secrets.md)** — section *Pull latest build onto your phone* (includes `git restore` for local changes + `scripts/iphone-pull-and-run.sh`).
