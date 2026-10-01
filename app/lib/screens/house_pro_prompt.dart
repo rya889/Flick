@@ -12,8 +12,11 @@ Future<void> showHouseProPrompt(
   required HouseProPlacement placement,
 }) async {
   final c = context.read<FlickController>();
-  if (c.plusActive) return;
-  if (c.playing || c.showFinishCelebration) return;
+  if (c.plusActive && placement != HouseProPlacement.settings) return;
+  if (placement == HouseProPlacement.finish &&
+      (c.playing || c.showFinishCelebration)) {
+    return;
+  }
 
   final title = switch (placement) {
     HouseProPlacement.finish => 'You finished a book',
@@ -29,8 +32,10 @@ Future<void> showHouseProPrompt(
       'Download a premium English voice in iOS Settings, or unlock Pro when cloud voices ship.',
   };
 
+  final rootContext = Navigator.of(context, rootNavigator: true).context;
+
   await showModalBottomSheet<void>(
-    context: context,
+    context: rootContext,
     showDragHandle: true,
     builder: (context) => SafeArea(
       child: Padding(
@@ -46,7 +51,7 @@ Future<void> showHouseProPrompt(
             FilledButton(
               onPressed: () {
                 Navigator.pop(context);
-                showPaywallSheet(context, reason: PaywallReason.settings);
+                showPaywallSheet(rootContext, reason: PaywallReason.settings);
               },
               child: const Text('See Pro'),
             ),

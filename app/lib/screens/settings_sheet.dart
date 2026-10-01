@@ -16,6 +16,14 @@ Future<void> showSettingsSheet(BuildContext context) {
   );
 }
 
+/// Modal sheets cannot stack another sheet on iOS — pop settings, then present.
+Future<void> _openProFromSettings(BuildContext sheetContext) async {
+  final root = Navigator.of(sheetContext, rootNavigator: true).context;
+  Navigator.pop(sheetContext);
+  await Future<void>.delayed(Duration.zero);
+  await showPaywallSheet(root, reason: PaywallReason.settings);
+}
+
 class SettingsSheet extends StatelessWidget {
   const SettingsSheet({super.key});
 
@@ -82,10 +90,7 @@ class SettingsSheet extends StatelessWidget {
                     : r'Free · 2 imports · 60 min Listen/day. Pro $4.99/mo or $29.99/yr.',
               ),
               trailing: const Icon(Icons.chevron_right),
-              onTap: () => showHouseProPrompt(
-                context,
-                placement: HouseProPlacement.settings,
-              ),
+              onTap: () => _openProFromSettings(context),
             ),
             if (!c.plusActive && c.listenVoiceIsBasic)
               ListTile(
@@ -93,10 +98,15 @@ class SettingsSheet extends StatelessWidget {
                 leading: const Icon(Icons.record_voice_over_outlined),
                 title: const Text('Natural Listen voices'),
                 subtitle: const Text('Pro perk — public-domain text stays free'),
-                onTap: () => showHouseProPrompt(
-                  context,
-                  placement: HouseProPlacement.voiceTease,
-                ),
+                onTap: () async {
+                  final root = Navigator.of(context, rootNavigator: true).context;
+                  Navigator.pop(context);
+                  await Future<void>.delayed(Duration.zero);
+                  await showHouseProPrompt(
+                    root,
+                    placement: HouseProPlacement.voiceTease,
+                  );
+                },
               ),
             if (c.plusActive && c.plusService.demoActive)
               TextButton(
