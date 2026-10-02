@@ -21,4 +21,4 @@ If a trunk is blocked or the remaining work belongs to another trunk, stop and r
 
 ## Current next queue
 
-**T11–T14 (UX/covers) are complete.** Read [`post-ux-queue.md`](./post-ux-queue.md) and wait for Ryan to pick the next theme (or trunk). T10 remains parked.
+**T17 (ship-stabilize) is complete.** Read [`docs/T17-handoff.md`](../T17-handoff.md) for the alpha checklist. Wait for Ryan to name the next trunk. T10 remains parked.

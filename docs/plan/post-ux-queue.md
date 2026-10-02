@@ -24,7 +24,7 @@ See [`docs/T14-handoff.md`](../T14-handoff.md). Run on simulator after `git pull
 
 ## Next build options (pick one trunk / theme per session)
 
-**T15** (bundled seed covers) and **T16** (Pro premium Listen voices) are complete. **T10 stays parked** until Ryan unlocks in writing.
+**T15** (covers), **T16** (Pro voices), and **T17** (ship-stabilize / alpha checklist) are complete. **T10 stays parked** until Ryan unlocks in writing.
 
 | Priority | Theme | Notes |
 |----------|--------|--------|

@@ -106,7 +106,50 @@ class _NowPlayerState extends State<NowPlayer> {
             pageLabel: host?.pageLabel,
             chapterTitle: host?.chapterTitle ?? item.short.chapterTitle,
             onShowChapters: () async {
-              await host?.showChapters?.call();
+              if (host?.showChapters != null) {
+                await host!.showChapters!();
+                return;
+              }
+              // Shorts-only fallback: jump to first short of a chosen chapter.
+              final chapters = <int, String>{};
+              for (final feed in c.queue) {
+                chapters.putIfAbsent(
+                  feed.short.chapterIndex,
+                  () => feed.short.chapterTitle,
+                );
+              }
+              if (!context.mounted || chapters.isEmpty) return;
+              final picked = await showModalBottomSheet<int>(
+                context: context,
+                showDragHandle: true,
+                builder: (context) {
+                  final entries = chapters.entries.toList()
+                    ..sort((a, b) => a.key.compareTo(b.key));
+                  return SafeArea(
+                    child: ListView(
+                      children: [
+                        Padding(
+                          padding: const EdgeInsets.fromLTRB(20, 8, 20, 4),
+                          child: Text(
+                            'Chapters',
+                            style: Theme.of(context).textTheme.titleMedium,
+                          ),
+                        ),
+                        for (final e in entries)
+                          ListTile(
+                            title: Text(e.value),
+                            onTap: () => Navigator.pop(context, e.key),
+                          ),
+                      ],
+                    ),
+                  );
+                },
+              );
+              if (picked == null) return;
+              final idx = c.queue.indexWhere(
+                (f) => f.short.chapterIndex == picked,
+              );
+              if (idx >= 0) c.goToIndex(idx);
             },
             onShowReaderMenu: () async {
               await host?.showReaderMenu?.call();

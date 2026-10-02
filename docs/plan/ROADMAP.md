@@ -70,10 +70,11 @@ All cloud and local agents work on the shared trunk branch **`main`** (the repos
 | 14 | [T14-reader-chrome-polish](./trunks/T14-reader-chrome-polish.md) | S | complete |
 | 15 | [T15-bundled-seed-covers](./trunks/T15-bundled-seed-covers.md) | M | complete |
 | 16 | [T16-premium-voices-pro](./trunks/T16-premium-voices-pro.md) | M | complete |
+| 17 | [T17-ship-stabilize](./trunks/T17-ship-stabilize.md) | S | complete |
 
-**Backlog (not scheduled):** further monetization work, including cloud premium voices inside Pro, waits until the T11 → T12 → T13 → T14 UX queue finishes; Standard Ebooks polish beyond cleared cover art; accounts/sync; Bounce algorithm; Phase 1.5 rewarded voice trial. T10 remains parked until Ryan explicitly unlocks it.
+**Backlog (not scheduled):** cloud premium voices; accounts/sync polish; Bounce algorithm; Phase 1.5 rewarded voice trial. **T10 remains parked** until Ryan explicitly unlocks it.
 
-**Next queue:** UX trunks **T11–T14 are complete.** See [post-ux-queue](./post-ux-queue.md) for backlog options (bundled cover art, sync polish, Bounce, premium voices, etc.). **T10 remains parked** until Ryan unlocks.
+**Next queue:** **T17 ship-stabilize is complete** — see [`docs/T17-handoff.md`](../T17-handoff.md) for alpha checklist. Wait for Ryan to name the next trunk. **T10 remains parked.**
 
 **Cover policy (T11 → T12):** local generated typography is the guaranteed fallback and initial default; only individually rights-checked Standard Ebooks/museum CC0 art or permitted work-specific Gutenberg art may be bundled. Open Library and Google Books are lookup/research fallbacks, not assumed-cleared runtime assets.
 
