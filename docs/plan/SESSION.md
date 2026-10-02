@@ -27,7 +27,7 @@ All cloud and local agents work on the shared trunk branch **`main`** (the repos
 1. Read **this** file.
 2. Treat this in-repo plan as self-contained; cloud agents do not need vault access.
 3. Skim [`ROADMAP.md`](./ROADMAP.md) north star + principles (do not re-plan the whole roadmap).
-4. Open **exactly one** trunk under [`trunks/`](./trunks/) — the ID Ryan named, or the first **ready** trunk in the current queue **T11 → T12 → T13 → T14** whose deps are met.
+4. Open **exactly one** trunk under [`trunks/`](./trunks/) — the ID Ryan named, currently `T18-testflight-prep`, or the first **ready** trunk in the active queue whose deps are met.
 5. Optionally skim locked product notes if the trunk cites them:
    - [`README.md`](./README.md) — wedge + monetization locks
    - [`seed-shelf-2026-10-01.md`](./seed-shelf-2026-10-01.md) — dogfood titles
@@ -63,7 +63,7 @@ Assume context = code + docs + tools burns fast.
 
 ## Current next queue
 
-`T01`–`T17` are complete (including ship-stabilize). **Do not** start T10 without Ryan unlock. Alpha checklist: [`docs/T17-handoff.md`](../T17-handoff.md). Open [`post-ux-queue.md`](./post-ux-queue.md) for backlog; wait for Ryan to name the next trunk. T08/T09 paywall is shipped; avoid paywall churn unless asked.
+`T01`–`T17` are complete (including ship-stabilize). The next ready trunk is [`T18-testflight-prep`](./trunks/T18-testflight-prep.md), a no-new-features signing/IPA/metadata pass. Follow the nine-gate release path in [`release-milestones.md`](./release-milestones.md); start with the alpha checklist in [`docs/T17-handoff.md`](../T17-handoff.md). T10 ads, Bounce, cloud TTS, and accounts/sync for 1.0 remain parked; do not start T10 without Ryan unlock.
 
 ## Ryan dogfood bar (early trunks)
 Through **T03**, success means Ryan can: open app → see **Bartleby** on the shelf → Story-swipe → Listen → reach a **Finish** moment in one sitting. Later trunks must not regress that path.

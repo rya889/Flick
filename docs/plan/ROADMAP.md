@@ -71,14 +71,17 @@ All cloud and local agents work on the shared trunk branch **`main`** (the repos
 | 15 | [T15-bundled-seed-covers](./trunks/T15-bundled-seed-covers.md) | M | complete |
 | 16 | [T16-premium-voices-pro](./trunks/T16-premium-voices-pro.md) | M | complete |
 | 17 | [T17-ship-stabilize](./trunks/T17-ship-stabilize.md) | S | complete |
+| 18 | [T18-testflight-prep](./trunks/T18-testflight-prep.md) | S | **ready** — no new features; T17 complete |
 
-**Backlog (not scheduled):** cloud premium voices; accounts/sync polish; Bounce algorithm; Phase 1.5 rewarded voice trial. **T10 remains parked** until Ryan explicitly unlocks it.
+**Backlog (not scheduled):** **T10 ads**; Bounce algorithm; cloud TTS; accounts/sync for 1.0; Phase 1.5 rewarded voice trial. **T10 remains parked** until Ryan explicitly unlocks it.
 
-**Next queue:** **T17 ship-stabilize is complete** — see [`docs/T17-handoff.md`](../T17-handoff.md) for alpha checklist. Wait for Ryan to name the next trunk. **T10 remains parked.**
+**Release path:** follow [`release-milestones.md`](./release-milestones.md), gates 1–9: friend alpha → Apple signing → App Store Connect shell → RevenueCat/IAP live → TestFlight internal → optional external TestFlight → App Review → iOS 1.0 → Android later.
+
+**Next queue:** **T18-testflight-prep is ready** after completed T17 — see [`trunks/T18-testflight-prep.md`](./trunks/T18-testflight-prep.md) and [`docs/T17-handoff.md`](../T17-handoff.md). It is signing/IPA/metadata preparation only; no new features. **T10 remains parked.**
 
 **Cover policy (T11 → T12):** local generated typography is the guaranteed fallback and initial default; only individually rights-checked Standard Ebooks/museum CC0 art or permitted work-specific Gutenberg art may be bundled. Open Library and Google Books are lookup/research fallbacks, not assumed-cleared runtime assets.
 
 ## How to pick work
 1. Open `SESSION.md`.
-2. Take the **first ready trunk in the current T11–T14 queue** whose deps are met (or the ID Ryan named).
+2. Take the **ID Ryan named**; currently that is ready `T18-testflight-prep`. Otherwise take the first ready trunk in the active queue whose deps are met.
 3. Stop when acceptance tests pass or the session budget is spent — write handoff, don’t stretch into the next ID.

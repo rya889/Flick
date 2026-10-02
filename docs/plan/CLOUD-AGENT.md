@@ -21,4 +21,4 @@ If a trunk is blocked or the remaining work belongs to another trunk, stop and r
 
 ## Current next queue
 
-**T17 (ship-stabilize) is complete.** Read [`docs/T17-handoff.md`](../T17-handoff.md) for the alpha checklist. Wait for Ryan to name the next trunk. T10 remains parked.
+**T18 (TestFlight prep) is ready; T17 (ship-stabilize) is complete.** Read [`trunks/T18-testflight-prep.md`](./trunks/T18-testflight-prep.md), then follow [`release-milestones.md`](./release-milestones.md) for the nine-gate iOS-first path. This is signing/IPA/metadata preparation only—no new features. T10 ads, Bounce, cloud TTS, and accounts/sync for 1.0 remain parked.
