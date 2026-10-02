@@ -11,6 +11,7 @@ import '../services/page_text.dart';
 import '../services/progress_bridge.dart';
 import '../services/tts_voice.dart';
 import '../state/flick_controller.dart';
+import '../theme/reader_paper.dart';
 import '../widgets/reader_margin_taps.dart';
 import 'house_pro_prompt.dart';
 
@@ -138,7 +139,7 @@ class _ReaderPagePaneState extends State<ReaderPagePane> {
     }
   }
 
-  TextStyle _style(FlickController c, _PaperColors paper) {
+  TextStyle _style(FlickController c, ReaderPaperColors paper) {
     return GoogleFonts.literata(
       fontSize: c.readerFontSize,
       height: 1.45,
@@ -168,7 +169,7 @@ class _ReaderPagePaneState extends State<ReaderPagePane> {
     try {
       final spans = await c.chapterSpans(widget.book.id);
       final chapters = chaptersForBook(widget.book, stored: spans);
-      final paper = _paperColors(c.readerPaper);
+      final paper = readerPaperColors(c.readerPaper);
       final pages = paginateBookFitted(
         chapters,
         style: _style(c, paper),
@@ -489,7 +490,7 @@ class _ReaderPagePaneState extends State<ReaderPagePane> {
   @override
   Widget build(BuildContext context) {
     final c = context.watch<FlickController>();
-    final paper = _paperColors(c.readerPaper);
+    final paper = readerPaperColors(c.readerPaper);
     final page = _pages.isEmpty
         ? null
         : _pages[_pageIndex.clamp(0, _pages.length - 1)];
@@ -747,7 +748,7 @@ class _ReaderPagePaneState extends State<ReaderPagePane> {
   Widget _topBar(
     BuildContext context,
     FlickController c,
-    _PaperColors paper,
+    ReaderPaperColors paper,
     PageSlice? page,
     String pageLabel,
   ) {
@@ -866,7 +867,7 @@ class _ReaderPagePaneState extends State<ReaderPagePane> {
   Widget _bottomBar(
     BuildContext context,
     FlickController c,
-    _PaperColors paper,
+    ReaderPaperColors paper,
     PageSlice? page,
     double fraction,
     String pageLabel,
@@ -944,16 +945,3 @@ class _PageText extends StatelessWidget {
   }
 }
 
-class _PaperColors {
-  const _PaperColors(this.background, this.ink);
-  final Color background;
-  final Color ink;
-}
-
-_PaperColors _paperColors(ReaderPaper paper) {
-  return switch (paper) {
-    ReaderPaper.paper => const _PaperColors(Color(0xFFFFFBF5), Color(0xFF1C1C1C)),
-    ReaderPaper.sepia => const _PaperColors(Color(0xFFF4ECD8), Color(0xFF3E2F1C)),
-    ReaderPaper.ink => const _PaperColors(Color(0xFF121212), Color(0xFFE8E4DC)),
-  };
-}

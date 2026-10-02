@@ -4,6 +4,7 @@ import 'package:provider/provider.dart';
 import '../models/models.dart';
 import '../state/flick_controller.dart';
 import 'house_pro_prompt.dart';
+import '../theme/reader_paper.dart';
 import '../widgets/reader_margin_taps.dart';
 import 'ebook_reader.dart';
 import 'reading_chrome.dart';
@@ -92,8 +93,11 @@ class _NowPlayerState extends State<NowPlayer> {
     });
 
     final host = c.readerPageHost;
+    final paper = readerPaperColors(c.readerPaper);
 
-    return Column(
+    return ColoredBox(
+      color: paper.background,
+      child: Column(
       children: [
         ReadingChrome(
           item: item,
@@ -110,7 +114,9 @@ class _NowPlayerState extends State<NowPlayer> {
           child: IndexedStack(
             index: c.readingLayout == ReadingLayout.pages ? 1 : 0,
             children: [
-              Stack(
+              ColoredBox(
+                color: paper.background,
+                child: Stack(
                 children: [
                   PageView.builder(
                     controller: _pageController,
@@ -132,19 +138,15 @@ class _NowPlayerState extends State<NowPlayer> {
                         child: SizedBox.expand(
                           child: DecoratedBox(
                             decoration: BoxDecoration(
-                              color: Theme.of(context).colorScheme.surface,
+                              color: paper.background,
                               borderRadius: BorderRadius.circular(16),
-                              border: Border.all(
-                                color: Theme.of(context)
-                                    .colorScheme
-                                    .onSurface
-                                    .withValues(alpha: 0.08),
-                              ),
+                              border: Border.all(color: paper.border),
                             ),
                             child: SingleChildScrollView(
                               padding: const EdgeInsets.fromLTRB(14, 14, 14, 14),
                               child: KaraokeText(
                                 text: text,
+                                inkColor: paper.ink,
                                 activeIndex: active
                                     ? c.karaokeWord
                                     : wordsOf(text).length,
@@ -172,6 +174,7 @@ class _NowPlayerState extends State<NowPlayer> {
                     ),
                 ],
               ),
+              ),
               ReaderPagePane(book: item.book, embedded: true),
             ],
           ),
@@ -183,6 +186,7 @@ class _NowPlayerState extends State<NowPlayer> {
           },
         ),
       ],
+    ),
     );
   }
 }

@@ -7,6 +7,7 @@ import '../state/flick_controller.dart';
 import 'house_pro_prompt.dart';
 import 'paywall_sheet.dart';
 import 'settings_sheet.dart';
+import '../theme/reader_paper.dart';
 import 'shell.dart';
 
 /// Shared header + footer for Story shorts and Page reading on the Now tab.
@@ -29,6 +30,7 @@ class ReadingChrome extends StatelessWidget {
   @override
   Widget build(BuildContext context) {
     final c = context.watch<FlickController>();
+    final paper = readerPaperColors(c.readerPaper);
     final progress = c.bookProgressFraction;
     final shortLabel = c.queue.isEmpty
         ? ''
@@ -50,11 +52,15 @@ class ReadingChrome extends StatelessWidget {
                       item.book.title,
                       maxLines: 1,
                       overflow: TextOverflow.ellipsis,
-                      style: Theme.of(context).textTheme.titleLarge,
+                      style: Theme.of(context).textTheme.titleLarge?.copyWith(
+                            color: paper.ink,
+                          ),
                     ),
                     Text(
                       c.playing ? 'Playing' : 'Paused · tap center to play',
-                      style: Theme.of(context).textTheme.bodySmall,
+                      style: Theme.of(context).textTheme.bodySmall?.copyWith(
+                            color: paper.mutedInk,
+                          ),
                     ),
                   ],
                 ),
@@ -66,6 +72,7 @@ class ReadingChrome extends StatelessWidget {
                 icon: Icon(
                   c.playing ? Icons.pause_circle : Icons.play_circle,
                   size: 32,
+                  color: paper.ink,
                 ),
               ),
             ],
@@ -118,7 +125,9 @@ class ReadingChrome extends StatelessWidget {
             textAlign: TextAlign.center,
             maxLines: 2,
             overflow: TextOverflow.ellipsis,
-            style: Theme.of(context).textTheme.labelLarge,
+            style: Theme.of(context).textTheme.labelLarge?.copyWith(
+                  color: paper.ink,
+                ),
           ),
         ),
         Padding(
@@ -127,6 +136,8 @@ class ReadingChrome extends StatelessWidget {
             value: progress.clamp(0, 1),
             minHeight: 3,
             borderRadius: BorderRadius.circular(2),
+            color: paper.ink.withValues(alpha: 0.88),
+            backgroundColor: paper.ink.withValues(alpha: 0.18),
           ),
         ),
         Padding(
@@ -134,7 +145,9 @@ class ReadingChrome extends StatelessWidget {
           child: Text(
             '$shortLabel · ${(progress * 100).round()}% through book',
             textAlign: TextAlign.center,
-            style: Theme.of(context).textTheme.labelSmall,
+            style: Theme.of(context).textTheme.labelSmall?.copyWith(
+                  color: paper.mutedInk,
+                ),
           ),
         ),
       ],
@@ -173,6 +186,7 @@ class _ReadingActionBar extends StatelessWidget {
   @override
   Widget build(BuildContext context) {
     final c = context.watch<FlickController>();
+    final paper = readerPaperColors(c.readerPaper);
     final hearted = c.hearts.contains(item.short.id);
     final saved = c.saves.contains(item.short.id);
     final listenLabel = !c.plusActive
@@ -184,11 +198,9 @@ class _ReadingActionBar extends StatelessWidget {
     return Container(
       padding: const EdgeInsets.fromLTRB(8, 0, 8, 4),
       decoration: BoxDecoration(
-        color: Theme.of(context).colorScheme.surface,
+        color: paper.background,
         border: Border(
-          top: BorderSide(
-            color: Theme.of(context).colorScheme.onSurface.withValues(alpha: 0.08),
-          ),
+          top: BorderSide(color: paper.border),
         ),
       ),
       child: Column(

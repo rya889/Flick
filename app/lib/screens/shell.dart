@@ -158,15 +158,21 @@ class ChapterPips extends StatelessWidget {
 }
 
 class KaraokeText extends StatelessWidget {
-  const KaraokeText({super.key, required this.text, required this.activeIndex});
+  const KaraokeText({
+    super.key,
+    required this.text,
+    required this.activeIndex,
+    this.inkColor,
+  });
 
   final String text;
   final int activeIndex;
+  final Color? inkColor;
 
   @override
   Widget build(BuildContext context) {
     final words = text.split(RegExp(r'\s+')).where((w) => w.isNotEmpty).toList();
-    final ink = Theme.of(context).colorScheme.onSurface;
+    final ink = inkColor ?? Theme.of(context).colorScheme.onSurface;
     return SizedBox(
       width: double.infinity,
       child: Text.rich(
