@@ -100,95 +100,101 @@ class _NowPlayerState extends State<NowPlayer> {
     return ColoredBox(
       color: paper.background,
       child: Column(
-      children: [
-        ReadingChrome(
-          item: item,
-          pageLabel: host?.pageLabel,
-          chapterTitle: host?.chapterTitle ?? item.short.chapterTitle,
-          onShowChapters: () async {
-            await host?.showChapters?.call();
-          },
-          onShowReaderMenu: () async {
-            await host?.showReaderMenu?.call();
-          },
-        ),
-        Expanded(
-          child: IndexedStack(
-            index: c.readingLayout == ReadingLayout.pages ? 1 : 0,
-            children: [
-              ColoredBox(
-                color: paper.background,
-                child: Stack(
-                children: [
-                  PageView.builder(
-                    controller: _pageController,
-                    scrollDirection: Axis.vertical,
-                    physics: const NeverScrollableScrollPhysics(),
-                    itemCount: c.queue.length,
-                    onPageChanged: (index) {
-                      if (_syncingPage) return;
-                      c.goToIndex(index);
-                    },
-                    itemBuilder: (context, index) {
-                      final feed = c.queue[index];
-                      final active = index == c.queueIndex;
-                      final text = active
-                          ? c.displayText
-                          : feed.short.original;
-                      return Padding(
-                        padding: const EdgeInsets.fromLTRB(10, 4, 10, 6),
-                        child: SizedBox.expand(
-                          child: DecoratedBox(
-                            decoration: BoxDecoration(
-                              color: paper.background,
-                              borderRadius: BorderRadius.circular(16),
-                              border: Border.all(color: paper.border),
-                            ),
-                            child: SingleChildScrollView(
-                              padding: const EdgeInsets.fromLTRB(14, 14, 14, 14),
-                              child: KaraokeText(
-                                text: text,
-                                inkColor: paper.ink,
-                                activeIndex: active
-                                    ? c.karaokeWord
-                                    : wordsOf(text).length,
+        children: [
+          ReadingChrome(
+            item: item,
+            pageLabel: host?.pageLabel,
+            chapterTitle: host?.chapterTitle ?? item.short.chapterTitle,
+            onShowChapters: () async {
+              await host?.showChapters?.call();
+            },
+            onShowReaderMenu: () async {
+              await host?.showReaderMenu?.call();
+            },
+          ),
+          Expanded(
+            child: IndexedStack(
+              sizing: StackFit.expand,
+              index: c.readingLayout == ReadingLayout.pages ? 1 : 0,
+              children: [
+                ColoredBox(
+                  color: paper.background,
+                  child: Stack(
+                    fit: StackFit.expand,
+                    children: [
+                      PageView.builder(
+                        controller: _pageController,
+                        scrollDirection: Axis.vertical,
+                        physics: const NeverScrollableScrollPhysics(),
+                        itemCount: c.queue.length,
+                        onPageChanged: (index) {
+                          if (_syncingPage) return;
+                          c.goToIndex(index);
+                        },
+                        itemBuilder: (context, index) {
+                          final feed = c.queue[index];
+                          final active = index == c.queueIndex;
+                          final text =
+                              active ? c.displayText : feed.short.original;
+                          return Padding(
+                            padding: const EdgeInsets.fromLTRB(12, 4, 12, 4),
+                            child: DecoratedBox(
+                              decoration: BoxDecoration(
+                                color: paper.background,
+                                borderRadius: BorderRadius.circular(12),
+                                border: Border.all(color: paper.border),
+                              ),
+                              child: ClipRRect(
+                                borderRadius: BorderRadius.circular(12),
+                                child: SingleChildScrollView(
+                                  padding: const EdgeInsets.fromLTRB(
+                                    14,
+                                    14,
+                                    14,
+                                    14,
+                                  ),
+                                  child: KaraokeText(
+                                    text: text,
+                                    inkColor: paper.ink,
+                                    activeIndex: active
+                                        ? c.karaokeWord
+                                        : wordsOf(text).length,
+                                  ),
+                                ),
                               ),
                             ),
-                          ),
-                        ),
-                      );
-                    },
+                          );
+                        },
+                      ),
+                      ReaderMarginTapLayer(
+                        onPrevious: c.prevShort,
+                        onNext: c.nextShort,
+                        onCenterTap: c.togglePlay,
+                        onCenterDoubleTap: () {
+                          final id = c.current?.short.id;
+                          if (id != null) c.toggleHeart(id);
+                        },
+                      ),
+                      const HeartBurstOverlay(),
+                      if (c.showFinishCelebration)
+                        const _FinishCelebrationOverlay(),
+                      if (!c.playing)
+                        const IgnorePointer(child: _PausePlayOverlay()),
+                    ],
                   ),
-                  ReaderMarginTapLayer(
-                    onPrevious: c.prevShort,
-                    onNext: c.nextShort,
-                    onCenterTap: c.togglePlay,
-                    onCenterDoubleTap: () {
-                      final id = c.current?.short.id;
-                      if (id != null) c.toggleHeart(id);
-                    },
-                  ),
-                  const HeartBurstOverlay(),
-                  if (c.showFinishCelebration) const _FinishCelebrationOverlay(),
-                  if (!c.playing)
-                    const IgnorePointer(
-                      child: _PausePlayOverlay(),
-                    ),
-                ],
-              ),
-              ),
-              ReaderPagePane(book: item.book, embedded: true),
-            ],
+                ),
+                ReaderPagePane(book: item.book, embedded: true),
+              ],
+            ),
           ),
-        ),
-        ReadingActionBar(
-          item: item,
-          onShowReaderMenu: () async {
-            await host?.showReaderMenu?.call();
-          },
-        ),
-      ],
-    ),
+          ReadingActionBar(
+            item: item,
+            onShowReaderMenu: () async {
+              await host?.showReaderMenu?.call();
+            },
+          ),
+        ],
+      ),
     );
   }
 }

@@ -525,8 +525,14 @@ class _ReaderPagePaneState extends State<ReaderPagePane> {
             Expanded(
               child: LayoutBuilder(
                 builder: (context, constraints) {
+                  // Keep a small vertical safety margin so font metrics / chrome
+                  // never produce a page taller than the viewport.
+                  final fitH = (constraints.maxHeight - 12).clamp(80.0, 4000.0);
                   _scheduleFit(
-                    Size(constraints.maxWidth - 44, constraints.maxHeight),
+                    Size(
+                      (constraints.maxWidth - 44).clamp(120.0, 4000.0),
+                      fitH,
+                    ),
                   );
                   if (_loading) {
                     return const Center(child: CircularProgressIndicator());
@@ -575,15 +581,17 @@ class _ReaderPagePaneState extends State<ReaderPagePane> {
                           }
                           return Padding(
                             padding: const EdgeInsets.symmetric(horizontal: 22),
-                            child: Align(
-                              alignment: Alignment.topLeft,
-                              child: _PageText(
-                                text: slice.text.isEmpty
-                                    ? 'This chapter is empty.'
-                                    : slice.text,
-                                style: _style(c, paper),
-                                activeWord: activeWord,
-                                highlight: paper.ink.withValues(alpha: 0.16),
+                            child: ClipRect(
+                              child: Align(
+                                alignment: Alignment.topLeft,
+                                child: _PageText(
+                                  text: slice.text.isEmpty
+                                      ? 'This chapter is empty.'
+                                      : slice.text,
+                                  style: _style(c, paper),
+                                  activeWord: activeWord,
+                                  highlight: paper.ink.withValues(alpha: 0.16),
+                                ),
                               ),
                             ),
                           );
@@ -608,7 +616,7 @@ class _ReaderPagePaneState extends State<ReaderPagePane> {
     if (widget.embedded) {
       return ColoredBox(
         color: paper.background,
-        child: body,
+        child: SizedBox.expand(child: body),
       );
     }
 
