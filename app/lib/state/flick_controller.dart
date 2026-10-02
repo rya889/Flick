@@ -111,6 +111,16 @@ class FlickController extends ChangeNotifier {
   bool _ttsConfigured = false;
   bool _ttsHandlersInstalled = false;
   int _ttsSpeakBaseWordIndex = 0;
+  /// Bumped on every short navigation / karaoke reset so a stale TTS
+  /// completion (e.g. from stop-after-margin-tap) cannot auto-advance.
+  int _storySpeakGen = 0;
+  /// Armed only after a story utterance actually starts; cleared on reset.
+  int _autoAdvanceArmedGen = -1;
+  /// Completions before this time are treated as stop()-induced, not natural.
+  DateTime _ignoreStoryCompletionUntil =
+      DateTime.fromMillisecondsSinceEpoch(0);
+  DateTime _lastShortNavAt = DateTime.fromMillisecondsSinceEpoch(0);
+  static const _shortNavCooldown = Duration(milliseconds: 650);
   Map<String, String>? _ttsVoice;
   String? listenVoiceLabel;
   bool listenVoiceIsBasic = true;
@@ -254,19 +264,30 @@ class FlickController extends ChangeNotifier {
     notifyListeners();
 
     // Heavy migration after first frame — must not block or crash launch.
-    unawaited(_refreshExtractiveTldrInBackground());
+    unawaited(_refreshLibraryMigrationsInBackground());
   }
 
-  Future<void> _refreshExtractiveTldrInBackground() async {
+  Future<void> _refreshLibraryMigrationsInBackground() async {
     if (books.isEmpty) return;
     try {
+      await _store.rebuildShortsPackIfNeeded(books, shortsByBook, progress);
       await _store.refreshExtractiveTldrIfNeeded(books, shortsByBook);
       for (final book in books) {
         shortsByBook[book.id] = await _store.loadShorts(book.id);
       }
+      // Keep the open queue in sync if shorts were rebuilt under us.
+      final active = activeBook;
+      if (active != null && playMode == PlayMode.story) {
+        final shorts = shortsByBook[active.id] ?? [];
+        if (shorts.isNotEmpty) {
+          final resume = progress[active.id]?.shortIndex ?? queueIndex;
+          queue = shorts.map((s) => FeedItem(book: active, short: s)).toList();
+          queueIndex = resume.clamp(0, queue.length - 1);
+        }
+      }
       notifyListeners();
     } catch (e, st) {
-      debugPrint('Flick extractive TLDR refresh failed (non-fatal): $e\n$st');
+      debugPrint('Flick library migration failed (non-fatal): $e\n$st');
     }
   }
 
@@ -626,8 +647,9 @@ class FlickController extends ChangeNotifier {
     unawaited(ensureAiTldrForCurrent());
   }
 
-  void nextShort() {
+  void nextShort({bool fromUser = false}) {
     if (queue.isEmpty) return;
+    if (!_acceptShortNav(fromUser: fromUser)) return;
     if (queueIndex >= queue.length - 1) {
       if (playMode == PlayMode.bounce) {
         queue = _buildBounceQueue();
@@ -646,14 +668,27 @@ class FlickController extends ChangeNotifier {
     unawaited(ensureAiTldrForCurrent());
   }
 
-  void prevShort() {
+  void prevShort({bool fromUser = false}) {
     if (queue.isEmpty || queueIndex <= 0) return;
+    if (!_acceptShortNav(fromUser: fromUser)) return;
     queueIndex -= 1;
     _persistProgress();
     unawaited(_mirrorReaderFromCurrentShort());
     _resetKaraoke();
     notifyListeners();
     unawaited(ensureAiTldrForCurrent());
+  }
+
+  bool _acceptShortNav({bool fromUser = false}) {
+    final now = DateTime.now();
+    // User margin taps always share the cooldown; auto-advance uses a
+    // shorter gate so natural completion is not blocked after a recent tap
+    // invalidated the previous utterance.
+    final cooldown =
+        fromUser ? _shortNavCooldown : const Duration(milliseconds: 320);
+    if (now.difference(_lastShortNavAt) < cooldown) return false;
+    _lastShortNavAt = now;
+    return true;
   }
 
   void jumpChapter(int delta) {
@@ -1101,6 +1136,10 @@ class FlickController extends ChangeNotifier {
     try {
       await _configureTts();
       _ttsSpeakBaseWordIndex = fromWordIndex.clamp(0, max(0, displayWords.length - 1));
+      // stop() can emit a completion; do not treat it as end-of-short.
+      _autoAdvanceArmedGen = -1;
+      _ignoreStoryCompletionUntil =
+          DateTime.now().add(const Duration(milliseconds: 900));
       await _tts.stop();
       if (!kIsWeb && defaultTargetPlatform == TargetPlatform.iOS) {
         await _tts.setIosAudioCategory(
@@ -1140,6 +1179,8 @@ class FlickController extends ChangeNotifier {
         return;
       }
       if (!_playbackUsesTts || !playing) return;
+      // Arm auto-advance only after a real utterance starts — not after stop().
+      _autoAdvanceArmedGen = _storySpeakGen;
       if (karaokeWord < 0) {
         karaokeWord = _ttsSpeakBaseWordIndex;
         notifyListeners();
@@ -1173,10 +1214,24 @@ class FlickController extends ChangeNotifier {
       }
       if (!playing) return;
       if (!_playbackUsesTts) return;
+      if (DateTime.now().isBefore(_ignoreStoryCompletionUntil)) return;
+      final words = displayWords;
+      // Require real progress through the short so a late stop() completion
+      // after the next utterance already started cannot fast-forward.
+      final nearEnd = words.isEmpty ||
+          words.length <= 4 ||
+          karaokeWord >= words.length - 3 ||
+          karaokeWord >= (words.length * 0.85).floor();
+      final armed = _autoAdvanceArmedGen;
+      final gen = _storySpeakGen;
+      // One-shot: stop()-induced completions see armed < 0 after reset.
+      _autoAdvanceArmedGen = -1;
+      if (armed < 0 || armed != gen || !nearEnd) return;
       _karaokeTimer?.cancel();
-      karaokeWord = max(0, displayWords.length - 1);
+      karaokeWord = max(0, words.length - 1);
       notifyListeners();
       Future<void>.delayed(const Duration(milliseconds: 450), () {
+        if (gen != _storySpeakGen) return;
         if (playing && _playbackUsesTts) nextShort();
       });
     });
@@ -1357,6 +1412,11 @@ class FlickController extends ChangeNotifier {
   }
 
   void _resetKaraoke() {
+    // Disarm first so a stop()-triggered TTS completion cannot auto-advance.
+    _autoAdvanceArmedGen = -1;
+    _storySpeakGen += 1;
+    _ignoreStoryCompletionUntil =
+        DateTime.now().add(const Duration(milliseconds: 900));
     karaokeWord = -1;
     _karaokeTimer?.cancel();
     unawaited(_tts.stop());
@@ -1377,15 +1437,23 @@ class FlickController extends ChangeNotifier {
     karaokeWord = fromIndex;
     final words = displayWords;
     if (words.isEmpty) return;
+    final advanceGen = _storySpeakGen;
+    _autoAdvanceArmedGen = advanceGen;
     // ~420ms/word at 1x; allow up to 3x (~140ms) without clamping away the gain.
     final msPerWord = (420 / playbackSpeed).round().clamp(100, 900);
     _karaokeTimer = Timer.periodic(Duration(milliseconds: msPerWord), (timer) {
       if (!playing || _playbackUsesTts) return;
+      if (advanceGen != _storySpeakGen) {
+        timer.cancel();
+        return;
+      }
       karaokeWord += 1;
       notifyListeners();
       if (karaokeWord >= words.length - 1) {
         timer.cancel();
+        _autoAdvanceArmedGen = -1;
         Future<void>.delayed(const Duration(milliseconds: 450), () {
+          if (advanceGen != _storySpeakGen) return;
           if (playing && !_playbackUsesTts) nextShort();
         });
       }

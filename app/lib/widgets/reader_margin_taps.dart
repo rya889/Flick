@@ -9,7 +9,7 @@ class ReaderMarginTapLayer extends StatefulWidget {
     required this.onNext,
     required this.onCenterTap,
     this.onCenterDoubleTap,
-    this.navCooldown = const Duration(milliseconds: 750),
+    this.navCooldown = const Duration(milliseconds: 900),
   });
 
   final VoidCallback onPrevious;

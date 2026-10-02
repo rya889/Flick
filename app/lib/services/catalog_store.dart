@@ -61,6 +61,49 @@ class CatalogStore {
     await _setMeta('extractiveTldr.v2', 'true');
   }
 
+  /// Rebuild shorts with consistent min/target/max packing; remap progress.
+  Future<void> rebuildShortsPackIfNeeded(
+    List<LibraryBook> books,
+    Map<String, List<ShortSegment>> shortsByBook,
+    Map<String, ReadingProgress> progress,
+  ) async {
+    final done = await _getMeta('shortsPack.v3');
+    if (done == 'true') return;
+
+    for (final book in books) {
+      if (book.text.trim().isEmpty) continue;
+      final oldShorts = shortsByBook[book.id] ?? await loadShorts(book.id);
+      final newShorts = buildShorts(book);
+      if (newShorts.isEmpty) continue;
+      await saveShorts(book.id, newShorts);
+      shortsByBook[book.id] = newShorts;
+      await _upsertBook(book.copyWith(shortCount: newShorts.length));
+
+      final prog = progress[book.id];
+      if (prog == null || oldShorts.isEmpty) continue;
+      final oldIndex = prog.shortIndex.clamp(0, oldShorts.length - 1);
+      var wordsBefore = 0;
+      for (var i = 0; i < oldIndex; i++) {
+        wordsBefore += oldShorts[i].wordCount;
+      }
+      var acc = 0;
+      var mapped = 0;
+      for (var i = 0; i < newShorts.length; i++) {
+        mapped = i;
+        acc += newShorts[i].wordCount;
+        if (acc > wordsBefore) break;
+      }
+      progress[book.id] = ReadingProgress(
+        bookId: book.id,
+        shortId: newShorts[mapped].id,
+        shortIndex: mapped,
+        updatedAt: prog.updatedAt,
+      );
+    }
+    await saveProgress(progress);
+    await _setMeta('shortsPack.v3', 'true');
+  }
+
   Future<List<LibraryBook>> loadBooks() async {
     final rows = await (_db.select(_db.libraryBooks)
           ..orderBy([(t) => OrderingTerm.desc(t.addedAt)]))

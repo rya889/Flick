@@ -210,8 +210,8 @@ class _NowPlayerState extends State<NowPlayer> {
                         },
                       ),
                       ReaderMarginTapLayer(
-                        onPrevious: c.prevShort,
-                        onNext: c.nextShort,
+                        onPrevious: () => c.prevShort(fromUser: true),
+                        onNext: () => c.nextShort(fromUser: true),
                         onCenterTap: c.togglePlay,
                         onCenterDoubleTap: () {
                           final id = c.current?.short.id;
