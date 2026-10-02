@@ -106,11 +106,14 @@ class _NowPlayerState extends State<NowPlayer> {
             pageLabel: host?.pageLabel,
             chapterTitle: host?.chapterTitle ?? item.short.chapterTitle,
             onShowChapters: () async {
-              if (host?.showChapters != null) {
+              // Pages layout uses the reader host picker (page-accurate).
+              // Shorts must use the queue-based picker — the embedded page
+              // host often has no controller yet and silently no-ops taps.
+              if (c.readingLayout == ReadingLayout.pages &&
+                  host?.showChapters != null) {
                 await host!.showChapters!();
                 return;
               }
-              // Shorts-only fallback: jump to first short of a chosen chapter.
               final chapters = <int, String>{};
               for (final feed in c.queue) {
                 chapters.putIfAbsent(
@@ -138,6 +141,7 @@ class _NowPlayerState extends State<NowPlayer> {
                         for (final e in entries)
                           ListTile(
                             title: Text(e.value),
+                            selected: e.key == item.short.chapterIndex,
                             onTap: () => Navigator.pop(context, e.key),
                           ),
                       ],

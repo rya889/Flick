@@ -1,10 +1,10 @@
 import '../models/models.dart';
 import 'abbreviate.dart';
 
-/// ~55–125 words targets ~20–45s Listen at 1x (T05 snackable shorts).
-const targetWords = 85;
-const minWords = 55;
-const maxWords = 125;
+/// ~60–110 words targets ~20–40s Listen at 1x (snackable shorts).
+const targetWords = 80;
+const minWords = 60;
+const maxWords = 110;
 
 final _chapterHeading = RegExp(
   r'^(?:CHAPTER|Chapter|PART|Part|BOOK|Book|SECTION|Section)\s+.+$',
@@ -28,52 +28,44 @@ List<String> _splitParagraphs(String text) {
       .toList();
 }
 
-/// Split a long paragraph into sentence groups, each at most [maxWords].
-List<String> _splitOversized(String paragraph) {
-  final sentences = paragraph
+List<String> _sentencesOf(String text) {
+  return text
       .split(RegExp(r'(?<=[.!?])\s+'))
+      .map((s) => s.trim())
       .where((s) => s.isNotEmpty)
       .toList();
-  if (sentences.isEmpty) return [paragraph];
+}
 
-  final chunks = <String>[];
-  var current = '';
-
-  for (final sentence in sentences) {
-    final candidate = current.isEmpty ? sentence : '$current $sentence';
-    if (wordCount(candidate) > maxWords && current.isNotEmpty) {
-      chunks.add(current.trim());
-      current = sentence;
-    } else {
-      current = candidate;
-    }
-  }
-  if (current.trim().isNotEmpty) chunks.add(current.trim());
-
-  // Hard-split any single sentence still over max.
+/// Hard-split any blob still over [maxWords].
+List<String> _hardSplitWords(String text) {
+  if (wordCount(text) <= maxWords) return [text];
+  final words = text.split(RegExp(r'\s+')).where((w) => w.isNotEmpty).toList();
   final out = <String>[];
-  for (final chunk in chunks) {
-    if (wordCount(chunk) <= maxWords) {
-      out.add(chunk);
-      continue;
-    }
-    final words = chunk.split(RegExp(r'\s+')).where((w) => w.isNotEmpty);
-    var buf = <String>[];
-    for (final w in words) {
-      buf.add(w);
-      if (buf.length >= maxWords) {
-        out.add(buf.join(' '));
-        buf = [];
-      }
-    }
-    if (buf.isNotEmpty) out.add(buf.join(' '));
+  for (var i = 0; i < words.length; i += maxWords) {
+    final end = (i + maxWords).clamp(0, words.length);
+    out.add(words.sublist(i, end).join(' '));
   }
   return out;
 }
 
-/// Pack paragraph/sentence units into snackable shorts near [targetWords].
+/// Pack paragraph units into snackable shorts near [targetWords].
 List<String> packShortUnits(List<String> units) {
   if (units.isEmpty) return const [];
+
+  final sentences = <String>[];
+  for (final unit in units) {
+    final trimmed = unit.trim();
+    if (trimmed.isEmpty) continue;
+    final parts = _sentencesOf(trimmed);
+    if (parts.isEmpty) {
+      sentences.add(trimmed);
+    } else {
+      for (final part in parts) {
+        sentences.addAll(_hardSplitWords(part));
+      }
+    }
+  }
+  if (sentences.isEmpty) return const [];
 
   final packed = <String>[];
   var current = '';
@@ -84,54 +76,86 @@ List<String> packShortUnits(List<String> units) {
     current = '';
   }
 
-  for (final unit in units) {
-    final piece = unit.trim();
-    if (piece.isEmpty) continue;
+  for (final sentence in sentences) {
     if (current.isEmpty) {
-      current = piece;
+      current = sentence;
       continue;
     }
-    final candidate = '$current $piece';
+    final candidate = '$current $sentence';
     final words = wordCount(candidate);
     if (words <= targetWords) {
       current = candidate;
       continue;
     }
-    // Crossing target: emit current if it's already snackable enough.
     if (wordCount(current) >= minWords) {
       flush();
-      current = piece;
+      current = sentence;
       continue;
     }
-    // Current is still short — keep growing until max, then cut.
     if (words <= maxWords) {
       current = candidate;
     } else {
       flush();
-      current = piece;
+      current = sentence;
     }
   }
   flush();
 
-  // Merge a tiny trailing short into the previous one when possible.
-  if (packed.length >= 2 && wordCount(packed.last) < minWords) {
-    final merged = '${packed[packed.length - 2]} ${packed.last}';
-    if (wordCount(merged) <= maxWords + 20) {
-      packed[packed.length - 2] = merged;
-      packed.removeLast();
+  return _coalesceShorts(packed);
+}
+
+/// Merge undersized shorts into neighbors until everything is near target.
+List<String> _coalesceShorts(List<String> input) {
+  if (input.length <= 1) return input;
+  var out = _mergeTinies(List<String>.from(input));
+
+  // Re-split merges that blew past a soft ceiling (no recursive coalesce).
+  final softMax = maxWords + 35;
+  final normalized = <String>[];
+  for (final chunk in out) {
+    if (wordCount(chunk) <= softMax) {
+      normalized.add(chunk);
+      continue;
+    }
+    final sentences = _sentencesOf(chunk);
+    var current = '';
+    for (final sentence in sentences) {
+      final candidate = current.isEmpty ? sentence : '$current $sentence';
+      if (wordCount(candidate) > maxWords && current.isNotEmpty) {
+        normalized.add(current.trim());
+        current = sentence;
+      } else {
+        current = candidate;
+      }
+    }
+    if (current.trim().isNotEmpty) {
+      normalized.addAll(_hardSplitWords(current.trim()));
     }
   }
+  // Re-split can leave crumbs — merge them again, allowing soft overshoot.
+  return _mergeTinies(normalized);
+}
 
-  // Merge a tiny leading short forward when the chapter opens short.
-  if (packed.length >= 2 && wordCount(packed.first) < minWords) {
-    final merged = '${packed.first} ${packed[1]}';
-    if (wordCount(merged) <= maxWords + 20) {
-      packed[1] = merged;
-      packed.removeAt(0);
+List<String> _mergeTinies(List<String> input) {
+  if (input.length <= 1) return input;
+  final out = List<String>.from(input);
+  var guard = 0;
+  while (guard++ < 64) {
+    final tinyAt = out.indexWhere((s) => wordCount(s) < minWords);
+    if (tinyAt < 0) break;
+    if (tinyAt > 0) {
+      out[tinyAt - 1] = '${out[tinyAt - 1]} ${out[tinyAt]}';
+      out.removeAt(tinyAt);
+      continue;
     }
+    if (tinyAt < out.length - 1) {
+      out[tinyAt] = '${out[tinyAt]} ${out[tinyAt + 1]}';
+      out.removeAt(tinyAt + 1);
+      continue;
+    }
+    break;
   }
-
-  return packed;
+  return out;
 }
 
 List<ShortSegment> buildShorts(LibraryBook book) {
@@ -176,16 +200,31 @@ List<ShortSegment> buildShorts(LibraryBook book) {
       continue;
     }
 
-    if (wordCount(body) < 8) continue;
+    // Keep even short dialogue lines so packing can merge them.
+    if (wordCount(body) < 3) continue;
     started = true;
-
-    if (wordCount(body) <= maxWords) {
-      pendingUnits.add(body);
-    } else {
-      pendingUnits.addAll(_splitOversized(body));
-    }
+    pendingUnits.add(body);
   }
   flushPending();
+
+  // Chapter boundaries can leave a crumb short — fold into a neighbor.
+  for (var i = pieces.length - 1; i >= 1; i--) {
+    if (wordCount(pieces[i].text) >= minWords) continue;
+    pieces[i - 1] = (
+      text: '${pieces[i - 1].text} ${pieces[i].text}',
+      chapterIndex: pieces[i - 1].chapterIndex,
+      chapterTitle: pieces[i - 1].chapterTitle,
+    );
+    pieces.removeAt(i);
+  }
+  if (pieces.length >= 2 && wordCount(pieces.first.text) < minWords) {
+    pieces[1] = (
+      text: '${pieces.first.text} ${pieces[1].text}',
+      chapterIndex: pieces[1].chapterIndex,
+      chapterTitle: pieces[1].chapterTitle,
+    );
+    pieces.removeAt(0);
+  }
 
   if (pieces.isEmpty && book.text.trim().isNotEmpty) {
     final slice = book.text.trim();

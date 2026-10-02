@@ -28,27 +28,22 @@ void main() {
     // Most shorts should land in the snackable band; allow a few chapter-edge
     // leftovers outside it.
     final snackable =
-        wordCounts.where((w) => w >= minWords - 10 && w <= maxWords + 25).length;
-    expect(snackable, greaterThan((wordCounts.length * 3) ~/ 4));
-    final tiny = wordCounts.where((w) => w < 35).length;
-    expect(tiny, lessThan(wordCounts.length ~/ 10));
+        wordCounts.where((w) => w >= minWords - 5 && w <= maxWords + 40).length;
+    expect(snackable, greaterThan((wordCounts.length * 9) ~/ 10));
+    final tiny = wordCounts.where((w) => w < 45).length;
+    expect(tiny, lessThan(3));
   });
 
   test('packShortUnits merges tiny paragraphs toward target length', () {
     final units = [
-      'One two three four five six seven eight nine ten.',
-      'Eleven twelve thirteen fourteen fifteen sixteen seventeen eighteen.',
-      'Nineteen twenty twentyone twentytwo twentythree twentyfour twentyfive '
-          'twentysix twentyseven twentyeight twentynine thirty thirtyone '
-          'thirtytwo thirtythree thirtyfour thirtyfive thirtysix thirtyseven '
-          'thirtyeight thirtynine forty fortyone fortytwo fortythree '
-          'fortyfour fortyfive fortysix fortyseven fortyeight fortynine fifty.',
+      for (var i = 0; i < 12; i++)
+        'Sentence number ${i + 1} has enough filler words to act like prose here.',
     ];
     final packed = packShortUnits(units);
     expect(packed.length, lessThan(units.length));
-    expect(wordCount(packed.first), greaterThanOrEqualTo(minWords - 5));
     for (final chunk in packed) {
-      expect(wordCount(chunk), lessThanOrEqualTo(maxWords + 25));
+      expect(wordCount(chunk), greaterThanOrEqualTo(minWords - 5));
+      expect(wordCount(chunk), lessThanOrEqualTo(maxWords + 40));
     }
   });
 }

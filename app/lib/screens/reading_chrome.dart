@@ -109,15 +109,18 @@ class ReadingChrome extends StatelessWidget {
               ],
             ),
             const SizedBox(height: 8),
-            ClipRRect(
-              borderRadius: BorderRadius.circular(2),
-              child: LinearProgressIndicator(
-                value: progress,
-                minHeight: 3,
-                color: Theme.of(context).colorScheme.primary,
-                backgroundColor: paper.ink.withValues(alpha: 0.16),
+            if (c.readingLayout == ReadingLayout.shorts)
+              const ChapterPips()
+            else
+              ClipRRect(
+                borderRadius: BorderRadius.circular(2),
+                child: LinearProgressIndicator(
+                  value: progress,
+                  minHeight: 3,
+                  color: Theme.of(context).colorScheme.primary,
+                  backgroundColor: paper.ink.withValues(alpha: 0.16),
+                ),
               ),
-            ),
             const SizedBox(height: 4),
             Text(
               place,
@@ -131,6 +134,48 @@ class ReadingChrome extends StatelessWidget {
           ],
         ),
       ),
+    );
+  }
+}
+
+/// Segmented progress across shorts in the current chapter.
+class ChapterPips extends StatelessWidget {
+  const ChapterPips({super.key});
+
+  @override
+  Widget build(BuildContext context) {
+    final c = context.watch<FlickController>();
+    final item = c.current;
+    if (item == null) return const SizedBox.shrink();
+    final shorts = c.shortsByBook[item.book.id] ?? [];
+    final inChapter = shorts
+        .where((s) => s.chapterIndex == item.short.chapterIndex)
+        .toList();
+    if (inChapter.isEmpty) return const SizedBox.shrink();
+    final localIndex = inChapter
+        .indexWhere((s) => s.id == item.short.id)
+        .clamp(0, inChapter.length - 1);
+    final signal = Theme.of(context).colorScheme.primary;
+    final paper = readerPaperColors(
+      c.paperForBrightness(Theme.of(context).brightness),
+    );
+
+    return Row(
+      children: [
+        for (var i = 0; i < inChapter.length; i++)
+          Expanded(
+            child: Container(
+              height: 4,
+              margin: const EdgeInsets.symmetric(horizontal: 1.5),
+              decoration: BoxDecoration(
+                color: i <= localIndex
+                    ? signal
+                    : paper.ink.withValues(alpha: 0.18),
+                borderRadius: BorderRadius.circular(2),
+              ),
+            ),
+          ),
+      ],
     );
   }
 }

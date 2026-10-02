@@ -118,45 +118,6 @@ class ModePill extends StatelessWidget {
   }
 }
 
-class ChapterPips extends StatelessWidget {
-  const ChapterPips({super.key});
-
-  @override
-  Widget build(BuildContext context) {
-    final c = context.watch<FlickController>();
-    final item = c.current;
-    if (item == null) return const SizedBox.shrink();
-    final shorts = c.shortsByBook[item.book.id] ?? [];
-    final inChapter =
-        shorts.where((s) => s.chapterIndex == item.short.chapterIndex).toList();
-    if (inChapter.isEmpty) return const SizedBox.shrink();
-    final localIndex =
-        inChapter.indexWhere((s) => s.id == item.short.id).clamp(0, inChapter.length - 1);
-    final signal = Theme.of(context).colorScheme.primary;
-
-    return Row(
-      children: [
-        for (var i = 0; i < inChapter.length; i++)
-          Expanded(
-            child: Container(
-              height: 3,
-              margin: const EdgeInsets.symmetric(horizontal: 1.5),
-              decoration: BoxDecoration(
-                color: i <= localIndex
-                    ? signal
-                    : (Theme.of(context).brightness == Brightness.dark
-                        ? FlickColors.inkMutedDark
-                        : FlickColors.inkMutedLight)
-                        .withValues(alpha: 0.35),
-                borderRadius: BorderRadius.circular(2),
-              ),
-            ),
-          ),
-      ],
-    );
-  }
-}
-
 class KaraokeText extends StatelessWidget {
   const KaraokeText({
     super.key,

@@ -453,7 +453,23 @@ class _ReaderPagePaneState extends State<ReaderPagePane> {
   }
 
   Future<void> _showChapters() async {
-    if (_chapters.isEmpty) return;
+    final c = _controller;
+    final chapterEntries = <({int index, String title})>[];
+    if (_chapters.isNotEmpty) {
+      for (final chapter in _chapters) {
+        chapterEntries.add((index: chapter.index, title: chapter.title));
+      }
+    } else if (c != null) {
+      final seen = <int>{};
+      for (final short in c.shortsByBook[widget.book.id] ?? const []) {
+        if (!seen.add(short.chapterIndex)) continue;
+        chapterEntries.add(
+          (index: short.chapterIndex, title: short.chapterTitle),
+        );
+      }
+    }
+    if (chapterEntries.isEmpty) return;
+
     final picked = await showModalBottomSheet<int>(
       context: context,
       showDragHandle: true,
@@ -468,7 +484,7 @@ class _ReaderPagePaneState extends State<ReaderPagePane> {
                   style: Theme.of(context).textTheme.titleMedium,
                 ),
               ),
-              for (final chapter in _chapters)
+              for (final chapter in chapterEntries)
                 ListTile(
                   title: Text(chapter.title),
                   onTap: () => Navigator.pop(context, chapter.index),
@@ -478,10 +494,9 @@ class _ReaderPagePaneState extends State<ReaderPagePane> {
         );
       },
     );
-    if (picked == null || _pageController == null) return;
-    final index = _pages.indexWhere((p) => p.chapterIndex == picked);
-    if (index < 0) return;
-    final c = _controller;
+    if (picked == null) return;
+
+    // Always move the story queue first — do not require page layout.
     if (c != null) {
       final shorts = c.shortsByBook[widget.book.id] ?? const <ShortSegment>[];
       final shortIdx = shorts.indexWhere((s) => s.chapterIndex == picked);
@@ -489,7 +504,12 @@ class _ReaderPagePaneState extends State<ReaderPagePane> {
         c.goToIndex(shortIdx);
       }
     }
-    await _pageController!.animateToPage(
+
+    final controller = _pageController;
+    if (controller == null || _pages.isEmpty) return;
+    final index = _pages.indexWhere((p) => p.chapterIndex == picked);
+    if (index < 0) return;
+    await controller.animateToPage(
       index,
       duration: const Duration(milliseconds: 240),
       curve: Curves.easeOut,

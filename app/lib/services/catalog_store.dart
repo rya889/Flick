@@ -67,7 +67,7 @@ class CatalogStore {
     Map<String, List<ShortSegment>> shortsByBook,
     Map<String, ReadingProgress> progress,
   ) async {
-    final done = await _getMeta('shortsPack.v3');
+    final done = await _getMeta('shortsPack.v4');
     if (done == 'true') return;
 
     for (final book in books) {
@@ -101,7 +101,7 @@ class CatalogStore {
       );
     }
     await saveProgress(progress);
-    await _setMeta('shortsPack.v3', 'true');
+    await _setMeta('shortsPack.v4', 'true');
   }
 
   Future<List<LibraryBook>> loadBooks() async {
