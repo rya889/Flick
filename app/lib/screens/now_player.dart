@@ -93,7 +93,9 @@ class _NowPlayerState extends State<NowPlayer> {
     });
 
     final host = c.readerPageHost;
-    final paper = readerPaperColors(c.readerPaper);
+    final paper = readerPaperColors(
+      c.paperForBrightness(Theme.of(context).brightness),
+    );
 
     return ColoredBox(
       color: paper.background,

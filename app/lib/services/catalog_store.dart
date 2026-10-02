@@ -259,6 +259,13 @@ class CatalogStore {
   Future<void> setReaderPaper(ReaderPaper value) =>
       _setMeta('reader.paper', value.name);
 
+  /// True once the user cycles paper/night in the reader (not theme sync).
+  Future<bool> get readerPaperUserSet async =>
+      (await _getMeta('reader.paperSet')) == 'true';
+
+  Future<void> setReaderPaperUserSet(bool value) =>
+      _setMeta('reader.paperSet', value ? 'true' : 'false');
+
   Future<bool> get readerFollowAlong async =>
       (await _getMeta('reader.follow')) == 'true';
 

@@ -60,6 +60,11 @@ class SettingsSheet extends StatelessWidget {
               selected: {c.themePreference},
               onSelectionChanged: (set) => c.setThemePreference(set.first),
             ),
+            const SizedBox(height: 6),
+            Text(
+              'Reading paper follows Light/Dark until you change it in the reader.',
+              style: Theme.of(context).textTheme.bodySmall,
+            ),
             const SizedBox(height: 20),
             ListTile(
               contentPadding: EdgeInsets.zero,

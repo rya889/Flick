@@ -59,6 +59,8 @@ class _ReaderPagePaneState extends State<ReaderPagePane> {
   bool _pageTurnInFlight = false;
   DateTime _lastPageTurnAt = DateTime.fromMillisecondsSinceEpoch(0);
   static const _pageTurnCooldown = Duration(milliseconds: 750);
+  Brightness? _laidOutBrightness;
+  ReaderPaper? _laidOutPaper;
 
   @override
   void initState() {
@@ -156,11 +158,13 @@ class _ReaderPagePaneState extends State<ReaderPagePane> {
     }
     _fit = fit;
     WidgetsBinding.instance.addPostFrameCallback((_) {
-      if (mounted) _layoutFor(fit);
+      if (mounted) {
+        _layoutFor(fit, Theme.of(context).brightness);
+      }
     });
   }
 
-  Future<void> _layoutFor(Size fit) async {
+  Future<void> _layoutFor(Size fit, Brightness brightness) async {
     final c = _controller;
     if (c == null) return;
     final current = _pages.isEmpty
@@ -169,7 +173,7 @@ class _ReaderPagePaneState extends State<ReaderPagePane> {
     try {
       final spans = await c.chapterSpans(widget.book.id);
       final chapters = chaptersForBook(widget.book, stored: spans);
-      final paper = readerPaperColors(c.readerPaper);
+      final paper = readerPaperColors(c.paperForBrightness(brightness));
       final pages = paginateBookFitted(
         chapters,
         style: _style(c, paper),
@@ -200,6 +204,8 @@ class _ReaderPagePaneState extends State<ReaderPagePane> {
         _error = null;
         _pageController = PageController(initialPage: _pageIndex);
       });
+      _laidOutBrightness = brightness;
+      _laidOutPaper = c.paperForBrightness(brightness);
       _persist();
       if (_followPlaying) _startFollow();
       _refreshReaderHostLabels();
@@ -369,21 +375,24 @@ class _ReaderPagePaneState extends State<ReaderPagePane> {
     final next = (c.readerFontSize + delta).clamp(14.0, 32.0);
     if (next == c.readerFontSize) return;
     await c.setReaderFontSize(next);
-    if (mounted) await _layoutFor(fit);
+    if (mounted) await _layoutFor(fit, Theme.of(context).brightness);
   }
 
   Future<void> _cyclePaper() async {
     final c = _controller;
     final fit = _fit;
     if (c == null) return;
-    final next = switch (c.readerPaper) {
+    final current = c.paperForBrightness(Theme.of(context).brightness);
+    final next = switch (current) {
       ReaderPaper.paper => ReaderPaper.sepia,
       ReaderPaper.sepia => ReaderPaper.ink,
       ReaderPaper.ink => ReaderPaper.paper,
     };
     await c.setReaderPaper(next);
     if (mounted) setState(() {});
-    if (fit != null && mounted) await _layoutFor(fit);
+    if (fit != null && mounted) {
+      await _layoutFor(fit, Theme.of(context).brightness);
+    }
   }
 
   Future<void> _pickVoice(FlickController c) async {
@@ -490,7 +499,17 @@ class _ReaderPagePaneState extends State<ReaderPagePane> {
   @override
   Widget build(BuildContext context) {
     final c = context.watch<FlickController>();
-    final paper = readerPaperColors(c.readerPaper);
+    final brightness = Theme.of(context).brightness;
+    final paperMode = c.paperForBrightness(brightness);
+    final paper = readerPaperColors(paperMode);
+    if (_fit != null &&
+        (_laidOutBrightness != brightness || _laidOutPaper != paperMode)) {
+      WidgetsBinding.instance.addPostFrameCallback((_) {
+        if (mounted && _fit != null) {
+          _layoutFor(_fit!, brightness);
+        }
+      });
+    }
     final page = _pages.isEmpty
         ? null
         : _pages[_pageIndex.clamp(0, _pages.length - 1)];
@@ -523,7 +542,7 @@ class _ReaderPagePaneState extends State<ReaderPagePane> {
                     children: [
                       PageView.builder(
                         key: ValueKey(
-                          '${c.readerFontSize}-${c.readerPaper.name}-${_pages.length}',
+                          '${c.readerFontSize}-${paperMode.name}-${_pages.length}',
                         ),
                         controller: _pageController,
                         physics: const NeverScrollableScrollPhysics(),
@@ -614,7 +633,7 @@ class _ReaderPagePaneState extends State<ReaderPagePane> {
     if (host == null) return;
     host.pageLabel = pageLabelForChrome;
     host.chapterTitle = chapterTitleForChrome;
-    _controller?.notifyListeners();
+    _controller?.notifyReaderHostLabelsChanged();
   }
 
   Future<void> _showReaderMenu(FlickController c) async {

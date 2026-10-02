@@ -30,7 +30,9 @@ class ReadingChrome extends StatelessWidget {
   @override
   Widget build(BuildContext context) {
     final c = context.watch<FlickController>();
-    final paper = readerPaperColors(c.readerPaper);
+    final paper = readerPaperColors(
+      c.paperForBrightness(Theme.of(context).brightness),
+    );
     final progress = c.bookProgressFraction;
     final shortLabel = c.queue.isEmpty
         ? ''
@@ -186,7 +188,9 @@ class _ReadingActionBar extends StatelessWidget {
   @override
   Widget build(BuildContext context) {
     final c = context.watch<FlickController>();
-    final paper = readerPaperColors(c.readerPaper);
+    final paper = readerPaperColors(
+      c.paperForBrightness(Theme.of(context).brightness),
+    );
     final hearted = c.hearts.contains(item.short.id);
     final saved = c.saves.contains(item.short.id);
     final listenLabel = !c.plusActive

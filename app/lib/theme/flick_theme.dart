@@ -110,6 +110,25 @@ ThemeData _buildFlickThemeWithGoogleFonts(Brightness brightness) {
       backgroundColor: surface,
       contentTextStyle: TextStyle(color: ink),
     ),
+    navigationBarTheme: NavigationBarThemeData(
+      backgroundColor: surface,
+      indicatorColor: signal.withValues(alpha: 0.22),
+      labelTextStyle: WidgetStatePropertyAll(
+        GoogleFonts.syne(fontWeight: FontWeight.w600, fontSize: 12, color: ink),
+      ),
+      iconTheme: WidgetStateProperty.resolveWith((states) {
+        final selected = states.contains(WidgetState.selected);
+        return IconThemeData(color: selected ? signal : muted);
+      }),
+    ),
+    bottomSheetTheme: BottomSheetThemeData(
+      backgroundColor: surface,
+      surfaceTintColor: Colors.transparent,
+    ),
+    dialogTheme: DialogThemeData(
+      backgroundColor: surface,
+      surfaceTintColor: Colors.transparent,
+    ),
   );
 }
 

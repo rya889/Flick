@@ -211,7 +211,7 @@ class HeartBurstOverlay extends StatelessWidget {
         opacity: show ? 1 : 0,
         duration: const Duration(milliseconds: 180),
         child: const Center(
-          child: Icon(Icons.favorite, size: 96, color: Color(0xFFFF3B2E)),
+          child: Icon(Icons.favorite, size: 96, color: FlickColors.signalLight),
         ),
       ),
     );

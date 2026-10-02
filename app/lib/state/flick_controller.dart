@@ -91,6 +91,8 @@ class FlickController extends ChangeNotifier {
   Map<String, ReaderLocation> readerLocations = {};
   double readerFontSize = 18;
   ReaderPaper readerPaper = ReaderPaper.paper;
+  /// When false, paper/ink follow app light/dark until the user picks a mode.
+  bool readerPaperUserSet = false;
   bool readerFollowAlong = false;
   bool readerOpen = false;
   ReadingLayout readingLayout = ReadingLayout.shorts;
@@ -114,6 +116,8 @@ class FlickController extends ChangeNotifier {
   bool listenVoiceIsBasic = true;
   List<SpokenVoice> listenVoices = const [];
   ReaderPageHostActions? readerPageHost;
+
+  void notifyReaderHostLabelsChanged() => notifyListeners();
 
   PlusService get plusService => _plus;
 
@@ -215,6 +219,7 @@ class FlickController extends ChangeNotifier {
     readerLocations = await _store.loadReaderLocations();
     readerFontSize = await _store.readerFontSize;
     readerPaper = await _store.readerPaper;
+    readerPaperUserSet = await _store.readerPaperUserSet;
     readerFollowAlong = await _store.readerFollowAlong;
     contentMode = ContentMode.full;
     books = await _store.loadBooks();
@@ -768,7 +773,25 @@ class FlickController extends ChangeNotifier {
   Future<void> setThemePreference(ThemePreference value) async {
     themePreference = value;
     await _store.setThemePreference(value);
+    // Keep unread paper mode in sync with app theme until user overrides.
+    if (!readerPaperUserSet) {
+      final next = switch (value) {
+        ThemePreference.dark => ReaderPaper.ink,
+        ThemePreference.light => ReaderPaper.paper,
+        ThemePreference.system => null,
+      };
+      if (next != null && next != readerPaper) {
+        readerPaper = next;
+        await _store.setReaderPaper(next);
+      }
+    }
     notifyListeners();
+  }
+
+  /// Paper mode for the reading surface (follows theme unless user chose one).
+  ReaderPaper paperForBrightness(Brightness brightness) {
+    if (readerPaperUserSet) return readerPaper;
+    return brightness == Brightness.dark ? ReaderPaper.ink : ReaderPaper.paper;
   }
 
   Future<List<StoredChapterSpan>> chapterSpans(String bookId) =>
@@ -877,7 +900,9 @@ class FlickController extends ChangeNotifier {
 
   Future<void> setReaderPaper(ReaderPaper value) async {
     readerPaper = value;
+    readerPaperUserSet = true;
     await _store.setReaderPaper(value);
+    await _store.setReaderPaperUserSet(true);
     notifyListeners();
   }
 
