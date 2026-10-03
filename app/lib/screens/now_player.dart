@@ -2,6 +2,7 @@ import 'package:flutter/material.dart';
 import 'package:provider/provider.dart';
 
 import '../models/models.dart';
+import '../services/short_builder.dart';
 import '../state/flick_controller.dart';
 import 'house_pro_prompt.dart';
 import '../theme/reader_paper.dart';
@@ -166,68 +167,102 @@ class _NowPlayerState extends State<NowPlayer> {
               children: [
                 ColoredBox(
                   color: paper.background,
-                  child: Stack(
-                    fit: StackFit.expand,
-                    children: [
-                      PageView.builder(
-                        controller: _pageController,
-                        scrollDirection: Axis.vertical,
-                        physics: const NeverScrollableScrollPhysics(),
-                        itemCount: c.queue.length,
-                        onPageChanged: (index) {
-                          if (_syncingPage) return;
-                          c.goToIndex(index);
-                        },
-                        itemBuilder: (context, index) {
-                          final feed = c.queue[index];
-                          final active = index == c.queueIndex;
-                          final text =
-                              active ? c.displayText : feed.short.original;
-                          return Padding(
-                            padding: const EdgeInsets.fromLTRB(12, 4, 12, 4),
-                            child: DecoratedBox(
-                              decoration: BoxDecoration(
-                                color: paper.background,
-                                borderRadius: BorderRadius.circular(12),
-                                border: Border.all(color: paper.border),
-                              ),
-                              child: ClipRRect(
-                                borderRadius: BorderRadius.circular(12),
-                                child: SingleChildScrollView(
-                                  padding: const EdgeInsets.fromLTRB(
-                                    14,
-                                    14,
-                                    14,
-                                    14,
+                  child: LayoutBuilder(
+                    builder: (context, constraints) {
+                      const outerH = 12.0 * 2;
+                      const outerV = 4.0 * 2;
+                      const innerPad = 14.0 * 2;
+                      final textWidth =
+                          (constraints.maxWidth - outerH - innerPad)
+                              .clamp(40.0, constraints.maxWidth);
+                      final textHeight =
+                          (constraints.maxHeight - outerV - innerPad)
+                              .clamp(40.0, constraints.maxHeight);
+                      final shortsStyle = Theme.of(context)
+                          .textTheme
+                          .bodyLarge
+                          ?.copyWith(
+                            fontSize: shortsFontSize,
+                            height: shortsLineHeight,
+                          );
+                      WidgetsBinding.instance.addPostFrameCallback((_) {
+                        if (!mounted) return;
+                        unawaited(
+                          c.ensureShortsFitted(
+                            maxWidth: textWidth,
+                            maxHeight: textHeight,
+                            style: shortsStyle,
+                          ),
+                        );
+                      });
+                      return Stack(
+                        fit: StackFit.expand,
+                        children: [
+                          PageView.builder(
+                            controller: _pageController,
+                            scrollDirection: Axis.vertical,
+                            physics: const NeverScrollableScrollPhysics(),
+                            itemCount: c.queue.length,
+                            onPageChanged: (index) {
+                              if (_syncingPage) return;
+                              c.goToIndex(index);
+                            },
+                            itemBuilder: (context, index) {
+                              final feed = c.queue[index];
+                              final active = index == c.queueIndex;
+                              final text = active
+                                  ? c.displayText
+                                  : feed.short.original;
+                              return Padding(
+                                padding:
+                                    const EdgeInsets.fromLTRB(12, 4, 12, 4),
+                                child: DecoratedBox(
+                                  decoration: BoxDecoration(
+                                    color: paper.background,
+                                    borderRadius: BorderRadius.circular(12),
+                                    border: Border.all(color: paper.border),
                                   ),
-                                  child: KaraokeText(
-                                    text: text,
-                                    inkColor: paper.ink,
-                                    activeIndex: active
-                                        ? c.karaokeWord
-                                        : wordsOf(text).length,
+                                  child: ClipRRect(
+                                    borderRadius: BorderRadius.circular(12),
+                                    child: Padding(
+                                      padding: const EdgeInsets.fromLTRB(
+                                        14,
+                                        14,
+                                        14,
+                                        14,
+                                      ),
+                                      child: Center(
+                                        child: KaraokeText(
+                                          text: text,
+                                          inkColor: paper.ink,
+                                          activeIndex: active
+                                              ? c.karaokeWord
+                                              : wordsOf(text).length,
+                                        ),
+                                      ),
+                                    ),
                                   ),
                                 ),
-                              ),
-                            ),
-                          );
-                        },
-                      ),
-                      ReaderMarginTapLayer(
-                        onPrevious: () => c.prevShort(fromUser: true),
-                        onNext: () => c.nextShort(fromUser: true),
-                        onCenterTap: c.togglePlay,
-                        onCenterDoubleTap: () {
-                          final id = c.current?.short.id;
-                          if (id != null) c.toggleHeart(id);
-                        },
-                      ),
-                      const HeartBurstOverlay(),
-                      if (c.showFinishCelebration)
-                        const _FinishCelebrationOverlay(),
-                      if (!c.playing)
-                        const IgnorePointer(child: _PausePlayOverlay()),
-                    ],
+                              );
+                            },
+                          ),
+                          ReaderMarginTapLayer(
+                            onPrevious: () => c.prevShort(fromUser: true),
+                            onNext: () => c.nextShort(fromUser: true),
+                            onCenterTap: c.togglePlay,
+                            onCenterDoubleTap: () {
+                              final id = c.current?.short.id;
+                              if (id != null) c.toggleHeart(id);
+                            },
+                          ),
+                          const HeartBurstOverlay(),
+                          if (c.showFinishCelebration)
+                            const _FinishCelebrationOverlay(),
+                          if (!c.playing)
+                            const IgnorePointer(child: _PausePlayOverlay()),
+                        ],
+                      );
+                    },
                   ),
                 ),
                 ReaderPagePane(book: item.book, embedded: true),

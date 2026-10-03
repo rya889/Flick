@@ -2,6 +2,7 @@ import 'dart:async';
 import 'dart:math';
 
 import 'package:flutter/foundation.dart';
+import 'package:flutter/painting.dart';
 import 'package:flutter_tts/flutter_tts.dart';
 import 'package:share_plus/share_plus.dart';
 
@@ -126,6 +127,10 @@ class FlickController extends ChangeNotifier {
   bool listenVoiceIsBasic = true;
   List<SpokenVoice> listenVoices = const [];
   ReaderPageHostActions? readerPageHost;
+
+  /// Last Shorts viewport fit key (`bookId:WxH:font`) — avoid rebuild loops.
+  String? _shortsFitKey;
+  bool _shortsFitInFlight = false;
 
   void notifyReaderHostLabelsChanged() => notifyListeners();
 
@@ -416,6 +421,7 @@ class FlickController extends ChangeNotifier {
   Future<void> openBook(LibraryBook book, {int? shortIndex}) async {
     activeBook = book;
     playMode = PlayMode.story;
+    _shortsFitKey = null;
     final shorts = shortsByBook[book.id] ?? await _store.loadShorts(book.id);
     shortsByBook[book.id] = shorts;
     final resume = shortIndex ??
@@ -432,6 +438,69 @@ class FlickController extends ChangeNotifier {
     _resetKaraoke();
     notifyListeners();
     unawaited(ensureAiTldrForCurrent());
+  }
+
+  /// Rebuild active-book shorts so each card fills the Shorts text viewport.
+  /// Fixed font (TikTok-style); call from Now layout when size is known.
+  Future<void> ensureShortsFitted({
+    required double maxWidth,
+    required double maxHeight,
+    TextStyle? style,
+  }) async {
+    final book = activeBook;
+    if (book == null || playMode != PlayMode.story) return;
+    if (maxWidth < 40 || maxHeight < 40) return;
+    if (_shortsFitInFlight) return;
+
+    final font = (style?.fontSize ?? shortsFontSize).round();
+    final key =
+        '${book.id}:${maxWidth.round()}x${maxHeight.round()}:$font';
+    if (_shortsFitKey == key) return;
+
+    _shortsFitInFlight = true;
+    try {
+      final oldShorts = List<ShortSegment>.from(
+        shortsByBook[book.id] ?? await _store.loadShorts(book.id),
+      );
+      final newShorts = buildShorts(
+        book,
+        maxWidth: maxWidth,
+        maxHeight: maxHeight,
+        style: style,
+      );
+      if (newShorts.isEmpty) return;
+
+      final mapped = remapShortIndex(
+        oldShorts: oldShorts,
+        newShorts: newShorts,
+        oldIndex: progress[book.id]?.shortIndex ?? queueIndex,
+      );
+
+      await _store.saveShorts(book.id, newShorts);
+      shortsByBook[book.id] = newShorts;
+      progress[book.id] = ReadingProgress(
+        bookId: book.id,
+        shortId: newShorts[mapped].id,
+        shortIndex: mapped,
+        updatedAt: DateTime.now(),
+      );
+      unawaited(_store.saveProgress(progress));
+
+      final wasPlaying = playing;
+      queue = newShorts.map((s) => FeedItem(book: book, short: s)).toList();
+      queueIndex = mapped.clamp(0, queue.length - 1);
+      _shortsFitKey = key;
+      unawaited(_mirrorReaderFromCurrentShort());
+      if (wasPlaying) {
+        _resetKaraoke();
+      } else {
+        karaokeWord = -1;
+      }
+      notifyListeners();
+      unawaited(ensureAiTldrForCurrent());
+    } finally {
+      _shortsFitInFlight = false;
+    }
   }
 
   double get bookProgressFraction {

@@ -61,13 +61,13 @@ class CatalogStore {
     await _setMeta('extractiveTldr.v2', 'true');
   }
 
-  /// Rebuild shorts with consistent min/target/max packing; remap progress.
+  /// Rebuild shorts with viewport-height packing; remap progress.
   Future<void> rebuildShortsPackIfNeeded(
     List<LibraryBook> books,
     Map<String, List<ShortSegment>> shortsByBook,
     Map<String, ReadingProgress> progress,
   ) async {
-    final done = await _getMeta('shortsPack.v4');
+    final done = await _getMeta('shortsPack.v5');
     if (done == 'true') return;
 
     for (final book in books) {
@@ -81,18 +81,11 @@ class CatalogStore {
 
       final prog = progress[book.id];
       if (prog == null || oldShorts.isEmpty) continue;
-      final oldIndex = prog.shortIndex.clamp(0, oldShorts.length - 1);
-      var wordsBefore = 0;
-      for (var i = 0; i < oldIndex; i++) {
-        wordsBefore += oldShorts[i].wordCount;
-      }
-      var acc = 0;
-      var mapped = 0;
-      for (var i = 0; i < newShorts.length; i++) {
-        mapped = i;
-        acc += newShorts[i].wordCount;
-        if (acc > wordsBefore) break;
-      }
+      final mapped = remapShortIndex(
+        oldShorts: oldShorts,
+        newShorts: newShorts,
+        oldIndex: prog.shortIndex,
+      );
       progress[book.id] = ReadingProgress(
         bookId: book.id,
         shortId: newShorts[mapped].id,
@@ -101,7 +94,7 @@ class CatalogStore {
       );
     }
     await saveProgress(progress);
-    await _setMeta('shortsPack.v4', 'true');
+    await _setMeta('shortsPack.v5', 'true');
   }
 
   Future<List<LibraryBook>> loadBooks() async {

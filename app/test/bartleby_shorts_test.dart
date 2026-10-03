@@ -7,7 +7,7 @@ import 'package:flick/services/short_builder.dart';
 void main() {
   TestWidgetsFlutterBinding.ensureInitialized();
 
-  test('Bartleby asset builds non-empty Story shorts', () async {
+  test('Bartleby shorts fit a fixed-font viewport', () async {
     const path = 'assets/samples/bartleby.txt';
     final text = await rootBundle.loadString(path);
     expect(text.trim().isNotEmpty, isTrue);
@@ -21,29 +21,46 @@ void main() {
       text: text,
       addedAt: DateTime(2026),
     );
-    final shorts = buildShorts(book);
+    const width = shortsFallbackWidth;
+    const height = shortsFallbackHeight;
+    final shorts = buildShorts(book, maxWidth: width, maxHeight: height);
     expect(shorts, isNotEmpty);
     expect(shorts.first.original.trim().isNotEmpty, isTrue);
-    final wordCounts = shorts.map((s) => s.wordCount).toList();
-    // Most shorts should land in the snackable band; allow a few chapter-edge
-    // leftovers outside it.
-    final snackable =
-        wordCounts.where((w) => w >= minWords - 5 && w <= maxWords + 40).length;
-    expect(snackable, greaterThan((wordCounts.length * 9) ~/ 10));
-    final tiny = wordCounts.where((w) => w < 45).length;
-    expect(tiny, lessThan(3));
+
+    final softCeil = height * shortsFillTarget * 1.2;
+    var overflows = 0;
+    var tiny = 0;
+    for (final short in shorts) {
+      final h = measureShortHeight(
+        short.original,
+        maxWidth: width,
+      );
+      if (h > softCeil) overflows += 1;
+      if (h < height * shortsMinFill * 0.4) tiny += 1;
+    }
+    // Fixed-font viewport packing: almost no card overflow / crumb shorts.
+    expect(overflows, lessThan(3));
+    expect(tiny, lessThan(shorts.length ~/ 20));
   });
 
-  test('packShortUnits merges tiny paragraphs toward target length', () {
+  test('packShortUnitsToViewport fills toward card height', () {
     final units = [
-      for (var i = 0; i < 12; i++)
-        'Sentence number ${i + 1} has enough filler words to act like prose here.',
+      for (var i = 0; i < 20; i++)
+        'Sentence number ${i + 1} has enough filler words to act like prose here for packing.',
     ];
-    final packed = packShortUnits(units);
+    const width = shortsFallbackWidth;
+    const height = shortsFallbackHeight;
+    final packed = packShortUnitsToViewport(
+      units,
+      maxWidth: width,
+      maxHeight: height,
+    );
+    expect(packed.length, greaterThan(1));
     expect(packed.length, lessThan(units.length));
     for (final chunk in packed) {
-      expect(wordCount(chunk), greaterThanOrEqualTo(minWords - 5));
-      expect(wordCount(chunk), lessThanOrEqualTo(maxWords + 40));
+      final h = measureShortHeight(chunk, maxWidth: width);
+      expect(h, lessThanOrEqualTo(height * shortsFillTarget + 4));
+      expect(wordCount(chunk), greaterThan(10));
     }
   });
 }

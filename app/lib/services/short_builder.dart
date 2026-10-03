@@ -1,10 +1,29 @@
+import 'package:flutter/painting.dart';
+
 import '../models/models.dart';
 import 'abbreviate.dart';
 
-/// ~60–110 words targets ~20–40s Listen at 1x (snackable shorts).
+/// Fixed Shorts type — TikTok/Insta style; Pages may still change size.
+const shortsFontSize = 19.0;
+const shortsLineHeight = 1.45;
+
+/// Used at import / tests before the Now pane has a real layout size.
+const shortsFallbackWidth = 350.0;
+const shortsFallbackHeight = 520.0;
+
+/// Soft fill targets as a fraction of the Shorts text viewport.
+const shortsFillTarget = 0.92;
+const shortsMinFill = 0.45;
+
+/// Kept for older tests / Listen estimates; packing is height-based.
 const targetWords = 80;
 const minWords = 60;
 const maxWords = 110;
+
+TextStyle defaultShortsTextStyle() => const TextStyle(
+      fontSize: shortsFontSize,
+      height: shortsLineHeight,
+    );
 
 final _chapterHeading = RegExp(
   r'^(?:CHAPTER|Chapter|PART|Part|BOOK|Book|SECTION|Section)\s+.+$',
@@ -13,8 +32,10 @@ final _chapterHeading = RegExp(
 bool _isChapterHeading(String line) {
   final t = line.trim();
   if (_chapterHeading.hasMatch(t)) return true;
-  if (RegExp(r"^[A-Z][A-Z0-9 ,.'-]{3,60}$").hasMatch(t) &&
-      wordCount(t) <= 8) {
+  // ALL-CAPS titles only — not sentence fragments like "A STORY OF WALL-STREET."
+  if (RegExp(r"^[A-Z][A-Z0-9 ,'-]{3,60}$").hasMatch(t) &&
+      wordCount(t) <= 8 &&
+      !t.endsWith('.')) {
     return true;
   }
   return false;
@@ -36,21 +57,84 @@ List<String> _sentencesOf(String text) {
       .toList();
 }
 
-/// Hard-split any blob still over [maxWords].
-List<String> _hardSplitWords(String text) {
-  if (wordCount(text) <= maxWords) return [text];
-  final words = text.split(RegExp(r'\s+')).where((w) => w.isNotEmpty).toList();
+double measureShortHeight(
+  String text, {
+  required double maxWidth,
+  TextStyle? style,
+}) {
+  final painter = TextPainter(
+    text: TextSpan(text: text, style: style ?? defaultShortsTextStyle()),
+    textDirection: TextDirection.ltr,
+    textAlign: TextAlign.center,
+  )..layout(maxWidth: maxWidth);
+  return painter.height;
+}
+
+bool shortFitsViewport(
+  String text, {
+  required double maxWidth,
+  required double maxHeight,
+  TextStyle? style,
+}) {
+  return measureShortHeight(text, maxWidth: maxWidth, style: style) <=
+      maxHeight;
+}
+
+/// Split [text] into chunks that each fit [budget] height.
+List<String> _fitToHeight(
+  String text, {
+  required double maxWidth,
+  required double budget,
+  required TextStyle style,
+}) {
+  final trimmed = text.trim();
+  if (trimmed.isEmpty) return const [];
+  if (measureShortHeight(trimmed, maxWidth: maxWidth, style: style) <= budget) {
+    return [trimmed];
+  }
+
+  final words = trimmed.split(RegExp(r'\s+')).where((w) => w.isNotEmpty).toList();
+  if (words.isEmpty) return const [];
+
   final out = <String>[];
-  for (var i = 0; i < words.length; i += maxWords) {
-    final end = (i + maxWords).clamp(0, words.length);
-    out.add(words.sublist(i, end).join(' '));
+  var start = 0;
+  while (start < words.length) {
+    if (start == words.length - 1) {
+      out.add(words[start]);
+      break;
+    }
+    var lo = start + 1;
+    var hi = words.length;
+    var best = start + 1;
+    while (lo <= hi) {
+      final mid = (lo + hi) >> 1;
+      final candidate = words.sublist(start, mid).join(' ');
+      if (measureShortHeight(candidate, maxWidth: maxWidth, style: style) <=
+          budget) {
+        best = mid;
+        lo = mid + 1;
+      } else {
+        hi = mid - 1;
+      }
+    }
+    if (best <= start) best = start + 1;
+    out.add(words.sublist(start, best).join(' '));
+    start = best;
   }
   return out;
 }
 
-/// Pack paragraph units into snackable shorts near [targetWords].
-List<String> packShortUnits(List<String> units) {
+/// Pack paragraph/sentence units so each short fills ~one Shorts viewport.
+List<String> packShortUnitsToViewport(
+  List<String> units, {
+  required double maxWidth,
+  required double maxHeight,
+  TextStyle? style,
+}) {
   if (units.isEmpty) return const [];
+  final textStyle = style ?? defaultShortsTextStyle();
+  final budget = (maxHeight * shortsFillTarget).clamp(40.0, maxHeight);
+  final minFill = maxHeight * shortsMinFill;
 
   final sentences = <String>[];
   for (final unit in units) {
@@ -58,10 +142,24 @@ List<String> packShortUnits(List<String> units) {
     if (trimmed.isEmpty) continue;
     final parts = _sentencesOf(trimmed);
     if (parts.isEmpty) {
-      sentences.add(trimmed);
+      sentences.addAll(
+        _fitToHeight(
+          trimmed,
+          maxWidth: maxWidth,
+          budget: budget,
+          style: textStyle,
+        ),
+      );
     } else {
       for (final part in parts) {
-        sentences.addAll(_hardSplitWords(part));
+        sentences.addAll(
+          _fitToHeight(
+            part,
+            maxWidth: maxWidth,
+            budget: budget,
+            style: textStyle,
+          ),
+        );
       }
     }
   }
@@ -69,6 +167,7 @@ List<String> packShortUnits(List<String> units) {
 
   final packed = <String>[];
   var current = '';
+  final softBudget = budget * 1.08;
 
   void flush() {
     final t = current.trim();
@@ -82,83 +181,147 @@ List<String> packShortUnits(List<String> units) {
       continue;
     }
     final candidate = '$current $sentence';
-    final words = wordCount(candidate);
-    if (words <= targetWords) {
+    final candidateH =
+        measureShortHeight(candidate, maxWidth: maxWidth, style: textStyle);
+    if (candidateH <= budget) {
       current = candidate;
       continue;
     }
-    if (wordCount(current) >= minWords) {
-      flush();
-      current = sentence;
+    final currentH =
+        measureShortHeight(current, maxWidth: maxWidth, style: textStyle);
+    // Prefer a slight overshoot over leaving an underfilled short.
+    if (currentH < minFill && candidateH <= softBudget) {
+      current = candidate;
       continue;
     }
-    if (words <= maxWords) {
-      current = candidate;
-    } else {
-      flush();
-      current = sentence;
-    }
+    flush();
+    current = sentence;
   }
   flush();
 
-  return _coalesceShorts(packed);
+  return _coalesceByHeight(
+    packed,
+    maxWidth: maxWidth,
+    budget: budget,
+    minFill: minFill,
+    style: textStyle,
+  );
 }
 
-/// Merge undersized shorts into neighbors until everything is near target.
-List<String> _coalesceShorts(List<String> input) {
+List<String> _coalesceByHeight(
+  List<String> input, {
+  required double maxWidth,
+  required double budget,
+  required double minFill,
+  required TextStyle style,
+}) {
   if (input.length <= 1) return input;
-  var out = _mergeTinies(List<String>.from(input));
+  final softBudget = budget * 1.08;
 
-  // Re-split merges that blew past a soft ceiling (no recursive coalesce).
-  final softMax = maxWords + 35;
+  List<String> mergePass(List<String> source) {
+    final out = List<String>.from(source);
+    final skipped = <int>{};
+    var guard = 0;
+    while (guard++ < 128) {
+      var idx = -1;
+      for (var i = 0; i < out.length; i++) {
+        if (skipped.contains(i)) continue;
+        final h =
+            measureShortHeight(out[i], maxWidth: maxWidth, style: style);
+        if (h < minFill) {
+          idx = i;
+          break;
+        }
+      }
+      if (idx < 0) break;
+
+      var merged = false;
+      if (idx > 0) {
+        final candidate = '${out[idx - 1]} ${out[idx]}';
+        if (measureShortHeight(candidate, maxWidth: maxWidth, style: style) <=
+            softBudget) {
+          out[idx - 1] = candidate;
+          out.removeAt(idx);
+          skipped.clear();
+          merged = true;
+        }
+      }
+      if (!merged && idx < out.length - 1) {
+        final candidate = '${out[idx]} ${out[idx + 1]}';
+        if (measureShortHeight(candidate, maxWidth: maxWidth, style: style) <=
+            softBudget) {
+          out[idx] = candidate;
+          out.removeAt(idx + 1);
+          skipped.clear();
+          merged = true;
+        }
+      }
+      if (!merged) skipped.add(idx);
+    }
+    return out;
+  }
+
+  var out = mergePass(input);
+
+  // Force-fold remaining tinies into the previous short (accept soft overshoot).
+  for (var i = out.length - 1; i >= 1; i--) {
+    final h = measureShortHeight(out[i], maxWidth: maxWidth, style: style);
+    if (h >= minFill) continue;
+    out[i - 1] = '${out[i - 1]} ${out[i]}';
+    out.removeAt(i);
+  }
+  if (out.length >= 2) {
+    final h = measureShortHeight(out.first, maxWidth: maxWidth, style: style);
+    if (h < minFill) {
+      out[1] = '${out.first} ${out[1]}';
+      out.removeAt(0);
+    }
+  }
+
+  // Re-split only chunks that blew well past the soft ceiling.
+  final hardCeil = softBudget * 1.12;
   final normalized = <String>[];
   for (final chunk in out) {
-    if (wordCount(chunk) <= softMax) {
+    final h = measureShortHeight(chunk, maxWidth: maxWidth, style: style);
+    if (h <= hardCeil) {
       normalized.add(chunk);
-      continue;
-    }
-    final sentences = _sentencesOf(chunk);
-    var current = '';
-    for (final sentence in sentences) {
-      final candidate = current.isEmpty ? sentence : '$current $sentence';
-      if (wordCount(candidate) > maxWords && current.isNotEmpty) {
-        normalized.add(current.trim());
-        current = sentence;
-      } else {
-        current = candidate;
-      }
-    }
-    if (current.trim().isNotEmpty) {
-      normalized.addAll(_hardSplitWords(current.trim()));
+    } else {
+      normalized.addAll(
+        _fitToHeight(
+          chunk,
+          maxWidth: maxWidth,
+          budget: softBudget,
+          style: style,
+        ),
+      );
     }
   }
-  // Re-split can leave crumbs — merge them again, allowing soft overshoot.
-  return _mergeTinies(normalized);
+  return mergePass(normalized);
 }
 
-List<String> _mergeTinies(List<String> input) {
-  if (input.length <= 1) return input;
-  final out = List<String>.from(input);
-  var guard = 0;
-  while (guard++ < 64) {
-    final tinyAt = out.indexWhere((s) => wordCount(s) < minWords);
-    if (tinyAt < 0) break;
-    if (tinyAt > 0) {
-      out[tinyAt - 1] = '${out[tinyAt - 1]} ${out[tinyAt]}';
-      out.removeAt(tinyAt);
-      continue;
-    }
-    if (tinyAt < out.length - 1) {
-      out[tinyAt] = '${out[tinyAt]} ${out[tinyAt + 1]}';
-      out.removeAt(tinyAt + 1);
-      continue;
-    }
-    break;
-  }
-  return out;
+/// Back-compat helper: pack with the canonical phone viewport.
+List<String> packShortUnits(List<String> units) {
+  return packShortUnitsToViewport(
+    units,
+    maxWidth: shortsFallbackWidth,
+    maxHeight: shortsFallbackHeight,
+  );
 }
 
-List<ShortSegment> buildShorts(LibraryBook book) {
+List<ShortSegment> buildShorts(
+  LibraryBook book, {
+  double? maxWidth,
+  double? maxHeight,
+  TextStyle? style,
+}) {
+  final width = (maxWidth != null && maxWidth >= 40)
+      ? maxWidth
+      : shortsFallbackWidth;
+  final height = (maxHeight != null && maxHeight >= 40)
+      ? maxHeight
+      : shortsFallbackHeight;
+  final textStyle = style ?? defaultShortsTextStyle();
+
   final paragraphs = _splitParagraphs(book.text);
   final pieces = <({String text, int chapterIndex, String chapterTitle})>[];
 
@@ -168,7 +331,12 @@ List<ShortSegment> buildShorts(LibraryBook book) {
   var pendingUnits = <String>[];
 
   void flushPending() {
-    final packed = packShortUnits(pendingUnits);
+    final packed = packShortUnitsToViewport(
+      pendingUnits,
+      maxWidth: width,
+      maxHeight: height,
+      style: textStyle,
+    );
     for (final text in packed) {
       pieces.add((
         text: text,
@@ -200,39 +368,67 @@ List<ShortSegment> buildShorts(LibraryBook book) {
       continue;
     }
 
-    // Keep even short dialogue lines so packing can merge them.
     if (wordCount(body) < 3) continue;
     started = true;
     pendingUnits.add(body);
   }
   flushPending();
 
-  // Chapter boundaries can leave a crumb short — fold into a neighbor.
+  // Chapter-edge crumbs: fold into neighbors by measured height.
+  final softBudget = height * shortsFillTarget * 1.08;
   for (var i = pieces.length - 1; i >= 1; i--) {
-    if (wordCount(pieces[i].text) >= minWords) continue;
+    final h = measureShortHeight(
+      pieces[i].text,
+      maxWidth: width,
+      style: textStyle,
+    );
+    if (h >= height * shortsMinFill) continue;
+    final merged = '${pieces[i - 1].text} ${pieces[i].text}';
+    if (measureShortHeight(merged, maxWidth: width, style: textStyle) >
+        softBudget) {
+      continue;
+    }
     pieces[i - 1] = (
-      text: '${pieces[i - 1].text} ${pieces[i].text}',
+      text: merged,
       chapterIndex: pieces[i - 1].chapterIndex,
       chapterTitle: pieces[i - 1].chapterTitle,
     );
     pieces.removeAt(i);
   }
-  if (pieces.length >= 2 && wordCount(pieces.first.text) < minWords) {
-    pieces[1] = (
-      text: '${pieces.first.text} ${pieces[1].text}',
-      chapterIndex: pieces[1].chapterIndex,
-      chapterTitle: pieces[1].chapterTitle,
+  if (pieces.length >= 2) {
+    final h = measureShortHeight(
+      pieces.first.text,
+      maxWidth: width,
+      style: textStyle,
     );
-    pieces.removeAt(0);
+    if (h < height * shortsMinFill) {
+      final merged = '${pieces.first.text} ${pieces[1].text}';
+      if (measureShortHeight(merged, maxWidth: width, style: textStyle) <=
+          softBudget) {
+        pieces[1] = (
+          text: merged,
+          chapterIndex: pieces[1].chapterIndex,
+          chapterTitle: pieces[1].chapterTitle,
+        );
+        pieces.removeAt(0);
+      }
+    }
   }
 
   if (pieces.isEmpty && book.text.trim().isNotEmpty) {
-    final slice = book.text.trim();
-    pieces.add((
-      text: slice.length > 800 ? slice.substring(0, 800) : slice,
-      chapterIndex: 0,
-      chapterTitle: 'Chapter 1',
-    ));
+    final fitted = _fitToHeight(
+      book.text.trim(),
+      maxWidth: width,
+      budget: height * shortsFillTarget,
+      style: textStyle,
+    );
+    for (final text in fitted) {
+      pieces.add((
+        text: text,
+        chapterIndex: 0,
+        chapterTitle: 'Chapter 1',
+      ));
+    }
   }
 
   return [
@@ -250,4 +446,27 @@ List<ShortSegment> buildShorts(LibraryBook book) {
         chapterTitle: pieces[i].chapterTitle,
       ),
   ];
+}
+
+/// Remap a short index after a rebuild using cumulative word offset.
+int remapShortIndex({
+  required List<ShortSegment> oldShorts,
+  required List<ShortSegment> newShorts,
+  required int oldIndex,
+}) {
+  if (newShorts.isEmpty) return 0;
+  if (oldShorts.isEmpty) return 0;
+  final clamped = oldIndex.clamp(0, oldShorts.length - 1);
+  var wordsBefore = 0;
+  for (var i = 0; i < clamped; i++) {
+    wordsBefore += oldShorts[i].wordCount;
+  }
+  var acc = 0;
+  var mapped = 0;
+  for (var i = 0; i < newShorts.length; i++) {
+    mapped = i;
+    acc += newShorts[i].wordCount;
+    if (acc > wordsBefore) break;
+  }
+  return mapped;
 }

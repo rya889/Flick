@@ -1,6 +1,7 @@
 import 'package:flutter/material.dart';
 import 'package:provider/provider.dart';
 
+import '../services/short_builder.dart';
 import '../state/flick_controller.dart';
 import '../theme/flick_theme.dart';
 import 'library_screen.dart';
@@ -146,8 +147,8 @@ class KaraokeText extends StatelessWidget {
                       color: i <= activeIndex
                           ? ink
                           : ink.withValues(alpha: 0.34),
-                      fontSize: 19,
-                      height: 1.45,
+                      fontSize: shortsFontSize,
+                      height: shortsLineHeight,
                     ),
               ),
               if (i < words.length - 1) const TextSpan(text: ' '),
